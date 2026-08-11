@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid, Users } from '@lucide/vue';
+import { BookOpen, CalendarCheck, ClipboardList, FolderGit2, LayoutGrid, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -16,6 +16,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as activitiesIndex } from '@/routes/activities';
+import { index as complianceIndex } from '@/routes/admin/compliance';
 import { index as usersIndex } from '@/routes/admin/users';
 import type { NavItem } from '@/types';
 
@@ -28,14 +30,26 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: dashboard(),
             icon: LayoutGrid,
         },
+        {
+            title: 'Activities',
+            href: activitiesIndex(),
+            icon: ClipboardList,
+        },
     ];
 
     if (page.props.auth.user.role === 'admin') {
-        items.push({
-            title: 'Users',
-            href: usersIndex(),
-            icon: Users,
-        });
+        items.push(
+            {
+                title: 'Compliance',
+                href: complianceIndex(),
+                icon: CalendarCheck,
+            },
+            {
+                title: 'Users',
+                href: usersIndex(),
+                icon: Users,
+            },
+        );
     }
 
     return items;
