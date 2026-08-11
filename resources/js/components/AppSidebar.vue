@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, CalendarCheck, ClipboardList, FolderGit2, LayoutGrid, Users } from '@lucide/vue';
+import { BookOpen, CalendarCheck, ClipboardList, FileBarChart, FolderGit2, LayoutGrid, Mail, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -18,7 +18,9 @@ import {
 import { dashboard } from '@/routes';
 import { index as activitiesIndex } from '@/routes/activities';
 import { index as complianceIndex } from '@/routes/admin/compliance';
+import { edit as reportSettingsEdit } from '@/routes/admin/report-settings';
 import { index as usersIndex } from '@/routes/admin/users';
+import { weekly as weeklyReport } from '@/routes/reports';
 import type { NavItem } from '@/types';
 
 const page = usePage();
@@ -35,6 +37,11 @@ const mainNavItems = computed<NavItem[]>(() => {
             href: activitiesIndex(),
             icon: ClipboardList,
         },
+        {
+            title: 'Weekly Report',
+            href: weeklyReport(),
+            icon: FileBarChart,
+        },
     ];
 
     if (page.props.auth.user.role === 'admin') {
@@ -48,6 +55,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Users',
                 href: usersIndex(),
                 icon: Users,
+            },
+            {
+                title: 'Report Settings',
+                href: reportSettingsEdit(),
+                icon: Mail,
             },
         );
     }
