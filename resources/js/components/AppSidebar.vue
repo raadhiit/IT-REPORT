@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, CalendarCheck, ClipboardList, FileBarChart, FolderGit2, LayoutGrid, Mail, Users } from '@lucide/vue';
+import { Activity, BookOpen, CalendarCheck, ClipboardList, FileBarChart, FolderGit2, LayoutGrid, Mail, Users } from '@lucide/vue';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -18,6 +18,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as activitiesIndex } from '@/routes/activities';
 import { index as complianceIndex } from '@/routes/admin/compliance';
+import { index as monitoringIndex } from '@/routes/admin/monitoring';
 import { edit as reportSettingsEdit } from '@/routes/admin/report-settings';
 import { index as usersIndex } from '@/routes/admin/users';
 import { weekly as weeklyReport } from '@/routes/reports';
@@ -60,6 +61,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 title: 'Report Settings',
                 href: reportSettingsEdit(),
                 icon: Mail,
+            },
+            {
+                title: 'Monitoring',
+                href: monitoringIndex(),
+                icon: Activity,
             },
         );
     }
