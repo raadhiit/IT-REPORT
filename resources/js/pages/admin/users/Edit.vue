@@ -12,7 +12,9 @@ import { index } from '@/routes/admin/users';
 import type { User } from '@/types';
 
 defineProps<{
-    user: Pick<User, 'id' | 'name' | 'email' | 'role' | 'is_active'>;
+    user: Pick<User, 'id' | 'name' | 'email' | 'role' | 'is_active' | 'office_email'> & {
+        has_office_email_password: boolean;
+    };
 }>();
 
 defineOptions({
@@ -90,6 +92,39 @@ defineOptions({
                 <Checkbox id="is_active" name="is_active" :default-checked="user.is_active" />
                 <span>Active (can log in)</span>
             </Label>
+
+            <div class="space-y-2 border-t pt-4">
+                <p class="text-sm font-medium">Email kantor (opsional)</p>
+                <p class="text-sm text-muted-foreground">
+                    Mailbox webmail asli staff ini — dipakai buat kirim laporan mingguan "atas nama" staff ke GM.
+                    Bukan email login sistem di atas.
+                </p>
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="office_email">Email kantor</Label>
+                <Input
+                    id="office_email"
+                    type="email"
+                    name="office_email"
+                    :default-value="user.office_email ?? ''"
+                    autocomplete="off"
+                />
+                <InputError :message="errors.office_email" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="office_email_password">Password email kantor</Label>
+                <Input id="office_email_password" type="password" name="office_email_password" autocomplete="off" />
+                <p class="text-sm text-muted-foreground">
+                    {{
+                        user.has_office_email_password
+                            ? 'Sudah tersimpan. Kosongkan untuk tetap pakai yang lama.'
+                            : 'Belum diisi.'
+                    }}
+                </p>
+                <InputError :message="errors.office_email_password" />
+            </div>
 
             <Button :disabled="processing" type="submit">Save</Button>
         </Form>

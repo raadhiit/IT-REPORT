@@ -6,32 +6,54 @@ use App\Models\ReportSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 
-test('it emails the gm and cc the spv when both are configured', function () {
-    Mail::fake();
-
-    User::factory()->admin()->create();
-    $staff = User::factory()->create();
-    Activity::factory()->for($staff)->create();
-
-    ReportSetting::current()->update([
+function configureOfficeMailSettings(array $overrides = []): ReportSetting
+{
+    return tap(ReportSetting::current())->update([
         'gm_name' => 'Rendra',
         'gm_email' => 'gm@example.com',
-        'spv_name' => 'Ryan',
-        'spv_email' => 'spv@example.com',
+        'office_mail_host' => 'mail.example.com',
+        'office_mail_port' => 465,
+        'office_mail_encryption' => 'ssl',
+        ...$overrides,
     ]);
+}
+
+function staffWithOfficeMailbox(array $attributes = []): User
+{
+    return User::factory()->create([
+        'office_email' => fake()->unique()->safeEmail(),
+        'office_email_password' => 'secret',
+        ...$attributes,
+    ]);
+}
+
+test('it sends one email per staff with an office mailbox configured, from that staff', function () {
+    Mail::fake();
+
+    configureOfficeMailSettings(['spv_name' => 'Ryan', 'spv_email' => 'spv@example.com']);
+
+    $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
+    $budi = staffWithOfficeMailbox(['name' => 'Budi']);
+    Activity::factory()->for($radhit)->create();
+    Activity::factory()->for($budi)->create();
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
-    Mail::assertSent(WeeklyReportMail::class, function (WeeklyReportMail $mail) {
-        return $mail->hasTo('gm@example.com') && $mail->hasCc('spv@example.com');
-    });
+    Mail::assertSent(WeeklyReportMail::class, fn (WeeklyReportMail $mail) => $mail->hasTo('gm@example.com')
+        && $mail->hasCc('spv@example.com')
+        && $mail->hasFrom($radhit->office_email));
+
+    Mail::assertSent(WeeklyReportMail::class, fn (WeeklyReportMail $mail) => $mail->hasTo('gm@example.com')
+        && $mail->hasFrom($budi->office_email));
+
+    Mail::assertSentCount(2);
 });
 
 test('it sends without cc when no spv email is configured', function () {
     Mail::fake();
 
-    User::factory()->admin()->create();
-    ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com', 'spv_email' => null]);
+    configureOfficeMailSettings();
+    staffWithOfficeMailbox();
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -41,7 +63,7 @@ test('it sends without cc when no spv email is configured', function () {
 test('it skips sending when no gm email is configured', function () {
     Mail::fake();
 
-    User::factory()->admin()->create();
+    staffWithOfficeMailbox();
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -51,20 +73,43 @@ test('it skips sending when no gm email is configured', function () {
 test('it skips sending when gm email is set but gm name is missing', function () {
     Mail::fake();
 
-    User::factory()->admin()->create();
     ReportSetting::current()->update(['gm_email' => 'gm@example.com', 'gm_name' => null]);
+    staffWithOfficeMailbox();
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
     Mail::assertNothingSent();
 });
 
-test('it fails gracefully when there is no admin user', function () {
+test('it fails when office mailbox SMTP settings are not configured', function () {
     Mail::fake();
 
     ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
+    staffWithOfficeMailbox();
 
     $this->artisan('report:send-weekly')->assertFailed();
+
+    Mail::assertNothingSent();
+});
+
+test('it skips gracefully when no active staff has an office mailbox configured', function () {
+    Mail::fake();
+
+    configureOfficeMailSettings();
+    User::factory()->create(['office_email' => null, 'office_email_password' => null]);
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    Mail::assertNothingSent();
+});
+
+test('it excludes inactive staff even if they have an office mailbox configured', function () {
+    Mail::fake();
+
+    configureOfficeMailSettings();
+    staffWithOfficeMailbox(['is_active' => false]);
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
 
     Mail::assertNothingSent();
 });

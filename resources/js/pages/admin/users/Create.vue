@@ -73,6 +73,26 @@ defineOptions({
                 <InputError :message="errors.role" />
             </div>
 
+            <div class="space-y-2 border-t pt-4">
+                <p class="text-sm font-medium">Email kantor (opsional)</p>
+                <p class="text-sm text-muted-foreground">
+                    Mailbox webmail asli staff ini — dipakai buat kirim laporan mingguan "atas nama" staff ke GM.
+                    Bukan email login sistem di atas.
+                </p>
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="office_email">Email kantor</Label>
+                <Input id="office_email" type="email" name="office_email" autocomplete="off" />
+                <InputError :message="errors.office_email" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="office_email_password">Password email kantor</Label>
+                <Input id="office_email_password" type="password" name="office_email_password" autocomplete="off" />
+                <InputError :message="errors.office_email_password" />
+            </div>
+
             <Button :disabled="processing" type="submit">Create user</Button>
         </Form>
     </div>

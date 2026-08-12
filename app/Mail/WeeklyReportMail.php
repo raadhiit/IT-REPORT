@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
@@ -23,6 +24,7 @@ class WeeklyReportMail extends Mailable
         private readonly string $gmName,
         private readonly ?string $spvName,
         private readonly string $senderName,
+        private readonly ?string $fromAddress = null,
     ) {}
 
     /**
@@ -31,6 +33,7 @@ class WeeklyReportMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
+            from: $this->fromAddress ? new Address($this->fromAddress, $this->senderName) : null,
             subject: "Laporan Aktivitas Mingguan — {$this->periodLabel}",
         );
     }

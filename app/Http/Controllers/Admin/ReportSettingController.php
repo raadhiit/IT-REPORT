@@ -17,7 +17,7 @@ class ReportSettingController extends Controller
     public function edit(): Response
     {
         return Inertia::render('admin/report-settings/Edit', [
-            'setting' => ReportSetting::current()->only('gm_email', 'gm_name', 'spv_email', 'spv_name', 'send_day', 'send_time'),
+            'setting' => ReportSetting::current()->only('gm_email', 'gm_name', 'spv_email', 'spv_name', 'send_day', 'send_time', 'office_mail_host', 'office_mail_port', 'office_mail_encryption'),
         ]);
     }
 

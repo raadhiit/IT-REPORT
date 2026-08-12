@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateReportSettingRequest extends FormRequest
 {
@@ -29,6 +30,9 @@ class UpdateReportSettingRequest extends FormRequest
             'spv_name' => ['nullable', 'required_with:spv_email', 'string', 'max:255'],
             'send_day' => ['required', 'integer', 'between:0,6'],
             'send_time' => ['required', 'date_format:H:i'],
+            'office_mail_host' => ['nullable', 'string', 'max:255'],
+            'office_mail_port' => ['nullable', 'integer', 'between:1,65535'],
+            'office_mail_encryption' => ['nullable', Rule::in(['ssl', 'tls'])],
         ];
     }
 }

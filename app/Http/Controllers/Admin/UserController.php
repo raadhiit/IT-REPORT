@@ -18,7 +18,7 @@ class UserController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/users/Index', [
-            'users' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'is_active']),
+            'users' => User::orderBy('name')->get(['id', 'name', 'email', 'role', 'is_active', 'office_email']),
         ]);
     }
 
@@ -48,7 +48,10 @@ class UserController extends Controller
     public function edit(User $user): Response
     {
         return Inertia::render('admin/users/Edit', [
-            'user' => $user->only('id', 'name', 'email', 'role', 'is_active'),
+            'user' => [
+                ...$user->only('id', 'name', 'email', 'role', 'is_active', 'office_email'),
+                'has_office_email_password' => $user->office_email_password !== null,
+            ],
         ]);
     }
 
@@ -61,6 +64,10 @@ class UserController extends Controller
 
         if (empty($data['password'])) {
             unset($data['password']);
+        }
+
+        if (empty($data['office_email_password'])) {
+            unset($data['office_email_password']);
         }
 
         $user->update($data);

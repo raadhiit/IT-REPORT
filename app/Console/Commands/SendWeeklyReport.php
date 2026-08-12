@@ -30,42 +30,65 @@ class SendWeeklyReport extends Command
             return self::SUCCESS;
         }
 
-        $admin = User::where('role', 'admin')->first();
-
-        if (! $admin) {
-            $this->error('No admin user found to generate the team-wide report.');
+        if (! $setting->office_mail_host || ! $setting->office_mail_port || ! $setting->office_mail_encryption) {
+            $this->error('Office mailbox SMTP settings (host/port/encryption) are not configured.');
 
             return self::FAILURE;
+        }
+
+        $staff = User::query()
+            ->where('is_active', true)
+            ->whereNotNull('office_email')
+            ->whereNotNull('office_email_password')
+            ->get();
+
+        if ($staff->isEmpty()) {
+            $this->warn('No active staff has an office mailbox configured — skipping.');
+
+            return self::SUCCESS;
         }
 
         [$start, $end] = WeeklyReportAggregator::currentWeek();
         $periodLabel = "{$start->toFormattedDateString()} – {$end->toFormattedDateString()}";
 
-        $report = $aggregator->build($admin, $start, $end);
-        $spreadsheet = $exporter->build($report, $start->toFormattedDateString(), $end->toFormattedDateString(), 'Tim IT');
+        foreach ($staff as $member) {
+            $report = $aggregator->build($member, $start, $end);
+            $spreadsheet = $exporter->build($report, $start->toFormattedDateString(), $end->toFormattedDateString(), $member->name);
 
-        $writer = new Xlsx($spreadsheet);
-        $writer->setIncludeCharts(true);
-        ob_start();
-        $writer->save('php://output');
-        $excelContents = (string) ob_get_clean();
+            $writer = new Xlsx($spreadsheet);
+            $writer->setIncludeCharts(true);
+            ob_start();
+            $writer->save('php://output');
+            $excelContents = (string) ob_get_clean();
 
-        $mail = Mail::to($setting->gm_email);
+            $mailerName = "office-smtp-{$member->id}";
+            config(["mail.mailers.{$mailerName}" => [
+                'transport' => 'smtp',
+                'host' => $setting->office_mail_host,
+                'port' => $setting->office_mail_port,
+                'encryption' => $setting->office_mail_encryption,
+                'username' => $member->office_email,
+                'password' => $member->office_email_password,
+            ]]);
 
-        if ($setting->spv_email) {
-            $mail->cc($setting->spv_email);
+            $mail = Mail::mailer($mailerName)->to($setting->gm_email);
+
+            if ($setting->spv_email) {
+                $mail->cc($setting->spv_email);
+            }
+
+            $mail->send(new WeeklyReportMail(
+                $periodLabel,
+                $excelContents,
+                "laporan-mingguan-{$member->name}-{$start->toDateString()}.xlsx",
+                $setting->gm_name,
+                $setting->spv_email ? $setting->spv_name : null,
+                $member->name,
+                $member->office_email,
+            ));
+
+            $this->info("Weekly report sent to {$setting->gm_email} from {$member->office_email}.");
         }
-
-        $mail->send(new WeeklyReportMail(
-            $periodLabel,
-            $excelContents,
-            "laporan-mingguan-{$start->toDateString()}.xlsx",
-            $setting->gm_name,
-            $setting->spv_email ? $setting->spv_name : null,
-            'Tim IT',
-        ));
-
-        $this->info("Weekly report sent to {$setting->gm_email}.");
 
         return self::SUCCESS;
     }

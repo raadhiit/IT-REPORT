@@ -15,10 +15,13 @@ use Illuminate\Support\Carbon;
  * @property string|null $spv_name
  * @property int $send_day Carbon dayOfWeek: 0=Sunday..6=Saturday
  * @property string $send_time HH:mm
+ * @property string|null $office_mail_host
+ * @property int|null $office_mail_port
+ * @property 'ssl'|'tls'|null $office_mail_encryption
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['gm_email', 'gm_name', 'spv_email', 'spv_name', 'send_day', 'send_time'])]
+#[Fillable(['gm_email', 'gm_name', 'spv_email', 'spv_name', 'send_day', 'send_time', 'office_mail_host', 'office_mail_port', 'office_mail_encryption'])]
 class ReportSetting extends Model
 {
     /**

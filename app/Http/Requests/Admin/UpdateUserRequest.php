@@ -44,6 +44,8 @@ class UpdateUserRequest extends FormRequest
             'role' => ['required', Rule::in(['admin', 'staff'])],
             'is_active' => ['required', 'boolean'],
             'password' => ['nullable', 'string', Password::default(), 'confirmed'],
+            'office_email' => ['nullable', 'email', 'max:255'],
+            'office_email_password' => ['nullable', 'string'],
         ];
     }
 }

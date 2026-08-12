@@ -31,6 +31,8 @@ class StoreUserRequest extends FormRequest
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
             'role' => ['required', Rule::in(['admin', 'staff'])],
+            'office_email' => ['nullable', 'email', 'max:255'],
+            'office_email_password' => ['nullable', 'string', 'required_with:office_email'],
         ];
     }
 }
