@@ -23,6 +23,7 @@ class SendWeeklyReport extends Command
     public function handle(WeeklyReportAggregator $aggregator, WeeklyReportExcelExporter $exporter): int
     {
         $setting = ReportSetting::current();
+        $setting->markSentNow();
 
         if (! $setting->gm_email || ! $setting->gm_name) {
             $this->warn('Report settings has no GM email/name configured — skipping.');
