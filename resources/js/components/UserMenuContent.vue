@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
 import { LogOut, Settings } from '@lucide/vue';
+import AppearanceTabs from '@/components/AppearanceTabs.vue';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -29,6 +30,10 @@ defineProps<Props>();
             <UserInfo :user="user" :show-email="true" />
         </div>
     </DropdownMenuLabel>
+    <DropdownMenuSeparator />
+    <div class="px-1 py-1.5">
+        <AppearanceTabs />
+    </div>
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">

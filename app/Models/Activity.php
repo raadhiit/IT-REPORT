@@ -34,7 +34,7 @@ class Activity extends Model
     protected function casts(): array
     {
         return [
-            'tanggal' => 'date',
+            'tanggal' => 'date:Y-m-d',
             'kategori' => ActivityCategory::class,
         ];
     }

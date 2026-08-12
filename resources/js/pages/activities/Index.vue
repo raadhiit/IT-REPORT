@@ -34,6 +34,15 @@ function categoryLabel(value: ActivityCategoryValue): string {
 function formatSize(bytes: number): string {
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
+
+function formatDate(date: string): string {
+    return new Date(`${date}T00:00:00`).toLocaleDateString('id-ID', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+}
 </script>
 
 <template>
@@ -106,8 +115,8 @@ function formatSize(bytes: number): string {
         </Card>
 
         <Card class="overflow-hidden py-0">
-            <CardContent class="p-0">
-                <table class="w-full text-sm">
+            <CardContent class="overflow-x-auto p-0">
+                <table class="w-full min-w-[40rem] text-sm">
                     <thead class="border-b bg-muted/50 text-left text-xs text-muted-foreground uppercase">
                         <tr>
                             <th class="px-4 py-3 font-medium">Tanggal</th>
@@ -127,8 +136,8 @@ function formatSize(bytes: number): string {
                             :key="activity.id"
                             class="border-b last:border-0"
                         >
-                            <td class="px-4 py-3 whitespace-nowrap text-muted-foreground">{{ activity.tanggal }}</td>
-                            <td class="px-4 py-3">
+                            <td class="px-4 py-3 whitespace-nowrap text-muted-foreground">{{ formatDate(activity.tanggal) }}</td>
+                            <td class="px-4 py-3 whitespace-nowrap">
                                 <Badge variant="outline">{{ categoryLabel(activity.kategori) }}</Badge>
                             </td>
                             <td class="px-4 py-3">{{ activity.deskripsi }}</td>
@@ -138,9 +147,9 @@ function formatSize(bytes: number): string {
                                         v-for="attachment in activity.attachments"
                                         :key="attachment.id"
                                         :href="showAttachment(attachment.id).url"
-                                        class="flex items-center gap-1 text-primary hover:underline"
+                                        class="flex items-center gap-1 whitespace-nowrap text-primary hover:underline"
                                     >
-                                        <Paperclip class="size-3.5" />
+                                        <Paperclip class="size-3.5 shrink-0" />
                                         {{ attachment.original_name }}
                                         <span class="text-xs text-muted-foreground">({{ formatSize(attachment.size) }})</span>
                                     </a>
