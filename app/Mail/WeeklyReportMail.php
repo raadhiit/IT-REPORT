@@ -34,7 +34,7 @@ class WeeklyReportMail extends Mailable
     {
         return new Envelope(
             from: $this->fromAddress ? new Address($this->fromAddress, $this->senderName) : null,
-            subject: "Laporan Aktivitas Mingguan — {$this->periodLabel}",
+            subject: "{$this->senderName} - Laporan Aktivitas Mingguan - {$this->periodLabel}",
         );
     }
 
