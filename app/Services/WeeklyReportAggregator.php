@@ -80,6 +80,32 @@ class WeeklyReportAggregator
     }
 
     /**
+     * Per-day activity counts for the given range, scoped the same way as build().
+     *
+     * @return Collection<int, array{date: string, count: int}>
+     */
+    public function dailyCounts(User $requestingUser, CarbonImmutable $start, CarbonImmutable $end): Collection
+    {
+        $scopedToSelf = ! $requestingUser->isAdmin();
+
+        $counts = $this->baseQuery($requestingUser, $scopedToSelf, $start, $end)
+            ->select('tanggal', DB::raw('count(*) as total'))
+            ->groupBy('tanggal')
+            ->pluck('total', 'tanggal');
+
+        $days = collect();
+
+        for ($date = $start; $date->lte($end); $date = $date->addDay()) {
+            $days->push([
+                'date' => $date->toDateString(),
+                'count' => (int) ($counts[$date->toDateString()] ?? 0),
+            ]);
+        }
+
+        return $days;
+    }
+
+    /**
      * @return Collection<int, array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>}>
      */
     private function buildStaffBreakdown(User $requestingUser, CarbonImmutable $start, CarbonImmutable $end): Collection

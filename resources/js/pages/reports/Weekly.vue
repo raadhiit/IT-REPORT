@@ -1,9 +1,14 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { FileDown } from '@lucide/vue';
+import { computed } from 'vue';
+import CategoryBreakdownBars from '@/components/CategoryBreakdownBars.vue';
 import Heading from '@/components/Heading.vue';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { useInitials } from '@/composables/useInitials';
 import { weekly } from '@/routes/reports';
 import { excel, pdf } from '@/routes/reports/weekly';
 import type { ActivityCategoryValue, ReportCategoryCount, ReportCategoryDetail, ReportStaffBreakdown } from '@/types';
@@ -23,6 +28,8 @@ defineOptions({
     },
 });
 
+const { getInitials } = useInitials();
+
 const categoryColors: Record<ActivityCategoryValue, string> = {
     maintenance: 'bg-amber-600',
     project: 'bg-blue-600',
@@ -31,92 +38,129 @@ const categoryColors: Record<ActivityCategoryValue, string> = {
     other: 'bg-gray-500',
 };
 
-function percent(count: number): number {
-    return props.total === 0 ? 0 : Math.round((count / props.total) * 100);
-}
-
 function formatDate(date: string): string {
     return new Date(`${date}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+}
+
+function staffPercent(count: number): number {
+    const max = Math.max(1, ...props.byStaff.map((staff) => staff.total));
+
+    return Math.round((count / max) * 100);
+}
+
+const filledCategories = computed(() => props.detailsByCategory.filter((category) => category.activities.length > 0));
+
+/**
+ * On the ≥lg 3-column grid, cards default to spanning 2 of 6 columns. The last
+ * row, if it isn't full, gets its cards widened to fill the row instead of
+ * leaving empty space: a lone card spans the full row, a pair spans half each.
+ */
+function categorySpanClass(index: number): string {
+    const total = filledCategories.value.length;
+    const remainder = total % 3;
+    const remainderStart = total - remainder;
+
+    if (index < remainderStart) {
+        return 'lg:col-span-2';
+    }
+
+    return remainder === 1 ? 'lg:col-span-6' : 'lg:col-span-3';
 }
 </script>
 
 <template>
     <Head title="Weekly Report" />
 
-    <div class="flex flex-col space-y-6 p-4">
-        <div class="flex items-center justify-between">
-            <Heading
-                title="Laporan mingguan"
-                :description="`${formatDate(start)} – ${formatDate(end)} · ${total} aktivitas`"
-            />
-            <div class="flex gap-2">
-                <Button as-child variant="outline">
+    <div class="flex flex-col space-y-8 p-4">
+        <Heading title="Laporan mingguan" description="Ringkasan aktivitas tim minggu berjalan" />
+
+        <Card class="overflow-hidden py-0">
+            <CardContent class="flex flex-col gap-6 py-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Periode laporan</p>
+                    <p class="mt-1 text-xl font-semibold">{{ formatDate(start) }} – {{ formatDate(end) }}</p>
+                </div>
+                <div class="flex items-center gap-8">
+                    <div>
+                        <p class="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Total aktivitas</p>
+                        <p class="mt-1 text-4xl font-semibold">{{ total }}</p>
+                    </div>
+                </div>
+            </CardContent>
+            <div class="flex gap-2 border-t bg-muted/30 px-6 py-3">
+                <Button as-child variant="outline" size="sm">
                     <a :href="pdf().url">
                         <FileDown />
                         Download PDF
                     </a>
                 </Button>
-                <Button as-child variant="outline">
+                <Button as-child variant="outline" size="sm">
                     <a :href="excel().url">
                         <FileDown />
                         Download Excel
                     </a>
                 </Button>
             </div>
-        </div>
+        </Card>
 
-        <Card>
-            <CardContent class="flex flex-col gap-3">
-                <div v-for="category in byCategory" :key="category.value" class="grid grid-cols-[128px_1fr_28px] items-center gap-3">
-                    <span class="flex items-center gap-2 text-sm font-medium">
+        <section>
+            <h2 class="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">Ringkasan per kategori</h2>
+            <Card>
+                <CardContent>
+                    <CategoryBreakdownBars :by-category="byCategory" :total="total" />
+                </CardContent>
+            </Card>
+        </section>
+
+        <section v-if="byStaff.length > 0">
+            <h2 class="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">Breakdown per staff</h2>
+            <Card class="overflow-hidden py-0">
+                <CardContent class="divide-y p-0">
+                    <div v-for="(staff, index) in byStaff" :key="staff.id" class="flex items-center gap-4 px-4 py-3">
+                        <span class="w-4 text-sm font-medium text-muted-foreground">{{ index + 1 }}</span>
+                        <Avatar class="size-8 shrink-0">
+                            <AvatarFallback class="text-xs">{{ getInitials(staff.name) }}</AvatarFallback>
+                        </Avatar>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-medium">{{ staff.name }}</p>
+                            <span class="mt-1.5 block h-1.5 max-w-48 overflow-hidden rounded-full bg-muted">
+                                <span
+                                    class="block h-full rounded-full bg-primary transition-[width]"
+                                    :style="{ width: `${staffPercent(staff.total)}%` }"
+                                />
+                            </span>
+                        </div>
+                        <span class="text-sm font-semibold">{{ staff.total }}</span>
+                    </div>
+                </CardContent>
+            </Card>
+        </section>
+
+        <section>
+            <h2 class="mb-3 text-sm font-semibold tracking-wide text-muted-foreground uppercase">Detail aktivitas</h2>
+            <div v-if="filledCategories.length > 0" class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
+                <Card
+                    v-for="(category, index) in filledCategories"
+                    :key="category.value"
+                    class="flex flex-col overflow-hidden py-0"
+                    :class="categorySpanClass(index)"
+                >
+                    <div class="flex items-center gap-2 border-b bg-muted/30 px-4 py-3">
                         <span class="size-2 rounded-sm" :class="categoryColors[category.value]" />
-                        {{ category.label }}
-                    </span>
-                    <span class="h-2 overflow-hidden rounded-full bg-muted">
-                        <span
-                            class="block h-full rounded-full"
-                            :class="categoryColors[category.value]"
-                            :style="{ width: `${percent(category.count)}%` }"
-                        />
-                    </span>
-                    <span class="text-right text-sm text-muted-foreground">{{ category.count }}</span>
-                </div>
-            </CardContent>
-        </Card>
-
-        <Card v-if="byStaff.length > 0" class="overflow-hidden py-0">
-            <CardContent class="p-0">
-                <table class="w-full text-sm">
-                    <thead class="border-b bg-muted/50 text-left text-xs text-muted-foreground uppercase">
-                        <tr>
-                            <th class="px-4 py-3 font-medium">Staff</th>
-                            <th class="px-4 py-3 text-right font-medium">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="staff in byStaff" :key="staff.id" class="border-b last:border-0">
-                            <td class="px-4 py-3 font-medium">{{ staff.name }}</td>
-                            <td class="px-4 py-3 text-right text-muted-foreground">{{ staff.total }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </CardContent>
-        </Card>
-
-        <Card v-for="category in detailsByCategory.filter((c) => c.activities.length > 0)" :key="category.value">
-            <CardContent>
-                <h3 class="mb-3 flex items-center gap-2 text-sm font-semibold">
-                    <span class="size-2 rounded-sm" :class="categoryColors[category.value]" />
-                    {{ category.label }}
-                    <span class="font-normal text-muted-foreground">({{ category.activities.length }})</span>
-                </h3>
-                <ul class="flex flex-col gap-2">
-                    <li v-for="activity in category.activities" :key="activity.id" class="flex gap-2 text-sm">
-                        <span class="w-28 shrink-0 text-xs text-muted-foreground">{{ activity.staff }} · {{ formatDate(activity.tanggal) }}</span>
-                        <span>{{ activity.deskripsi }}</span>
-                    </li>
-                </ul>
-            </CardContent>
-        </Card>
+                        <h3 class="text-sm font-semibold">{{ category.label }}</h3>
+                        <Badge variant="secondary" class="ml-auto">{{ category.activities.length }}</Badge>
+                    </div>
+                    <ul class="max-h-72 divide-y overflow-y-auto">
+                        <li v-for="activity in category.activities" :key="activity.id" class="px-4 py-3 text-sm">
+                            <p class="text-xs text-muted-foreground">{{ activity.staff }} · {{ formatDate(activity.tanggal) }}</p>
+                            <p class="mt-1">{{ activity.deskripsi }}</p>
+                        </li>
+                    </ul>
+                </Card>
+            </div>
+            <Card v-else>
+                <CardContent class="text-sm text-muted-foreground">Belum ada aktivitas yang tercatat minggu ini.</CardContent>
+            </Card>
+        </section>
     </div>
 </template>

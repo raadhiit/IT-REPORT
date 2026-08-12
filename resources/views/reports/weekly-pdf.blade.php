@@ -21,18 +21,27 @@
             font-family: 'DejaVu Sans', sans-serif;
             font-size: 11px;
             color: #1c2520;
+            line-height: 1.5;
         }
 
         .header {
             background: #0f172a;
             color: #ffffff;
-            padding: 18px 22px;
-            margin: -20px -20px 18px;
+            padding: 20px 24px;
+            margin: -20px -20px 22px;
+        }
+
+        .header .eyebrow {
+            color: #93c5fd;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 4px;
         }
 
         .header h1 {
-            font-size: 19px;
-            margin: 0 0 4px;
+            font-size: 20px;
+            margin: 0 0 6px;
             font-weight: bold;
         }
 
@@ -43,41 +52,59 @@
 
         .stats {
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 22px;
+            border-collapse: separate;
         }
 
         .stats td {
             width: 33.33%;
-            background: #f4f5f4;
-            padding: 10px 14px;
+            background: #f7f8f7;
+            padding: 12px 16px;
+            border-left: 4px solid #0f172a;
         }
 
         .stats td + td {
-            border-left: 6px solid #ffffff;
+            border-left-color: #0f172a;
+        }
+
+        .stats td.accent-cat {
+            border-left-color: #0f766e;
+        }
+
+        .stats td.accent-staff {
+            border-left-color: #6b7280;
+        }
+
+        .stats td.gap {
+            width: 10px;
+            background: transparent;
+            border-left: none;
+            padding: 0;
         }
 
         .stats .stat-value {
-            font-size: 20px;
+            font-size: 21px;
             font-weight: bold;
             color: #0f172a;
         }
 
         .stats .stat-label {
-            font-size: 9px;
+            font-size: 8.5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             color: #6b7280;
-            margin-top: 2px;
+            margin-top: 3px;
         }
 
         .section-title {
             font-size: 10px;
+            font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #5b655f;
-            border-bottom: 1px solid #dde3de;
-            padding-bottom: 4px;
-            margin: 20px 0 10px;
+            color: #1c2520;
+            border-bottom: 1.5px solid #0f172a;
+            padding-bottom: 5px;
+            margin: 24px 0 12px;
         }
 
         table {
@@ -87,7 +114,7 @@
 
         /* Bar chart rows (category + staff) */
         table.bars td {
-            padding: 6px 0;
+            padding: 7px 0;
             vertical-align: middle;
         }
 
@@ -125,43 +152,68 @@
             margin-right: 5px;
         }
 
-        table.staff th,
-        table.staff td {
-            text-align: left;
-            padding: 5px 0;
-            border-bottom: 1px solid #dde3de;
-        }
-
-        table.staff td.total {
-            text-align: right;
-            width: 60px;
-        }
-
-        .cat-heading {
-            font-size: 12px;
-            font-weight: bold;
-            margin: 14px 0 6px;
-        }
-
-        ul.activities {
-            margin: 0;
-            padding-left: 0;
-            list-style: none;
-        }
-
-        ul.activities li {
-            margin-bottom: 5px;
-        }
-
-        .who {
-            color: #5b655f;
+        .rank {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            background: #0f172a;
+            color: #ffffff;
             font-size: 9px;
+            font-weight: bold;
+            border-radius: 8px;
+            margin-right: 6px;
+        }
+
+        .cat-box {
+            border: 1px solid #dde3de;
+            margin-bottom: 14px;
+        }
+
+        .cat-box-header {
+            background: #f4f5f4;
+            border-bottom: 1px solid #dde3de;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .cat-box-header .count {
+            float: right;
+            background: #e4e6e4;
+            color: #4b544f;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 1px 7px;
+            border-radius: 8px;
+        }
+
+        table.activities td {
+            padding: 7px 12px;
+            border-bottom: 1px solid #eceeec;
+            vertical-align: top;
+        }
+
+        table.activities tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.activities td.who {
+            width: 110px;
+            color: #6b7280;
+            font-size: 9px;
+        }
+
+        table.activities td.desc {
+            font-size: 10.5px;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>Laporan Aktivitas Mingguan &mdash; {{ $generatedBy }}</h1>
+        <div class="eyebrow">Laporan Aktivitas Mingguan</div>
+        <h1>{{ $generatedBy }}</h1>
         <div class="meta">{{ $start }} &ndash; {{ $end }} &middot; Dibuat {{ $generatedAt }}</div>
     </div>
 
@@ -171,18 +223,20 @@
                 <div class="stat-value">{{ $total }}</div>
                 <div class="stat-label">Total Aktivitas</div>
             </td>
-            <td>
+            <td class="gap"></td>
+            <td class="accent-cat">
                 <div class="stat-value">{{ $topCategory && $topCategory['count'] > 0 ? $topCategory['label'] : '—' }}</div>
                 <div class="stat-label">Kategori Terbanyak</div>
             </td>
-            <td>
+            <td class="gap"></td>
+            <td class="accent-staff">
                 <div class="stat-value">{{ $byStaff->isNotEmpty() ? $byStaff->count() : '—' }}</div>
                 <div class="stat-label">Staff Aktif</div>
             </td>
         </tr>
     </table>
 
-    <div class="section-title">Distribusi Kategori</div>
+    <div class="section-title">Ringkasan per Kategori</div>
     <table class="bars">
         @foreach ($byCategory as $category)
             <tr>
@@ -204,11 +258,14 @@
     </table>
 
     @if ($byStaff->isNotEmpty())
-        <div class="section-title">Per Staff</div>
+        <div class="section-title">Breakdown per Staff</div>
         <table class="bars">
-            @foreach ($byStaff as $staff)
+            @foreach ($byStaff as $index => $staff)
                 <tr>
-                    <td class="bar-label">{{ $staff['name'] }}</td>
+                    <td class="bar-label">
+                        <span class="rank">{{ $index + 1 }}</span>
+                        {{ $staff['name'] }}
+                    </td>
                     <td class="bar-track">
                         <div class="track-outer">
                             <div
@@ -224,20 +281,28 @@
     @endif
 
     <div class="section-title">Detail Aktivitas</div>
+    @php $hasDetails = false; @endphp
     @foreach ($detailsByCategory as $category)
         @continue(count($category['activities']) === 0)
-        <div class="cat-heading">
-            <span class="dot" style="background: {{ $categoryColors[$category['value']] }};"></span>
-            {{ $category['label'] }} ({{ count($category['activities']) }})
+        @php $hasDetails = true; @endphp
+        <div class="cat-box">
+            <div class="cat-box-header">
+                <span class="count">{{ count($category['activities']) }}</span>
+                <span class="dot" style="background: {{ $categoryColors[$category['value']] }};"></span>
+                {{ $category['label'] }}
+            </div>
+            <table class="activities">
+                @foreach ($category['activities'] as $activity)
+                    <tr>
+                        <td class="who">{{ $activity['staff'] }} &middot; {{ \Illuminate\Support\Carbon::parse($activity['tanggal'])->translatedFormat('d/m') }}</td>
+                        <td class="desc">{{ $activity['deskripsi'] }}</td>
+                    </tr>
+                @endforeach
+            </table>
         </div>
-        <ul class="activities">
-            @foreach ($category['activities'] as $activity)
-                <li>
-                    <span class="who">{{ $activity['staff'] }} &middot; {{ \Illuminate\Support\Carbon::parse($activity['tanggal'])->translatedFormat('d/m') }}</span>
-                    &mdash; {{ $activity['deskripsi'] }}
-                </li>
-            @endforeach
-        </ul>
     @endforeach
+    @unless ($hasDetails)
+        <p style="color: #6b7280;">Belum ada aktivitas yang tercatat minggu ini.</p>
+    @endunless
 </body>
 </html>
