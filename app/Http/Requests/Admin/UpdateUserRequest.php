@@ -46,6 +46,9 @@ class UpdateUserRequest extends FormRequest
             'password' => ['nullable', 'string', Password::default(), 'confirmed'],
             'office_email' => ['nullable', 'email', 'max:255'],
             'office_email_password' => ['nullable', 'string'],
+            'office_mail_host' => ['nullable', 'string', 'max:255', 'required_with:office_email'],
+            'office_mail_port' => ['nullable', 'integer', 'between:1,65535', 'required_with:office_email'],
+            'office_mail_encryption' => ['nullable', Rule::in(['ssl', 'tls']), 'required_with:office_email'],
         ];
     }
 }

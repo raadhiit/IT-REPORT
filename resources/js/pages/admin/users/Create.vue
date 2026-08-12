@@ -93,6 +93,34 @@ defineOptions({
                 <InputError :message="errors.office_email_password" />
             </div>
 
+            <div class="grid gap-2">
+                <Label for="office_mail_host">Host SMTP</Label>
+                <Input id="office_mail_host" name="office_mail_host" autocomplete="off" placeholder="mail.perusahaan.com" />
+                <InputError :message="errors.office_mail_host" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="grid gap-2">
+                    <Label for="office_mail_port">Port</Label>
+                    <Input id="office_mail_port" type="number" name="office_mail_port" autocomplete="off" placeholder="465" />
+                    <InputError :message="errors.office_mail_port" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="office_mail_encryption">Enkripsi</Label>
+                    <Select name="office_mail_encryption">
+                        <SelectTrigger id="office_mail_encryption" class="w-full">
+                            <SelectValue placeholder="Pilih" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ssl">SSL</SelectItem>
+                            <SelectItem value="tls">TLS</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="errors.office_mail_encryption" />
+                </div>
+            </div>
+
             <Button :disabled="processing" type="submit">Create user</Button>
         </Form>
     </div>

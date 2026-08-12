@@ -6,14 +6,11 @@ use App\Models\ReportSetting;
 use App\Models\User;
 use Illuminate\Support\Facades\Mail;
 
-function configureOfficeMailSettings(array $overrides = []): ReportSetting
+function configureGmSettings(array $overrides = []): ReportSetting
 {
     return tap(ReportSetting::current())->update([
         'gm_name' => 'Rendra',
         'gm_email' => 'gm@example.com',
-        'office_mail_host' => 'mail.example.com',
-        'office_mail_port' => 465,
-        'office_mail_encryption' => 'ssl',
         ...$overrides,
     ]);
 }
@@ -23,6 +20,9 @@ function staffWithOfficeMailbox(array $attributes = []): User
     return User::factory()->create([
         'office_email' => fake()->unique()->safeEmail(),
         'office_email_password' => 'secret',
+        'office_mail_host' => 'mail.example.com',
+        'office_mail_port' => 465,
+        'office_mail_encryption' => 'ssl',
         ...$attributes,
     ]);
 }
@@ -30,10 +30,10 @@ function staffWithOfficeMailbox(array $attributes = []): User
 test('it sends one email per staff with an office mailbox configured, from that staff', function () {
     Mail::fake();
 
-    configureOfficeMailSettings(['spv_name' => 'Ryan', 'spv_email' => 'spv@example.com']);
+    configureGmSettings(['spv_name' => 'Ryan', 'spv_email' => 'spv@example.com']);
 
     $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
-    $budi = staffWithOfficeMailbox(['name' => 'Budi']);
+    $budi = staffWithOfficeMailbox(['name' => 'Budi', 'office_mail_host' => 'mail.other.com']);
     Activity::factory()->for($radhit)->create();
     Activity::factory()->for($budi)->create();
 
@@ -52,7 +52,7 @@ test('it sends one email per staff with an office mailbox configured, from that 
 test('it sends without cc when no spv email is configured', function () {
     Mail::fake();
 
-    configureOfficeMailSettings();
+    configureGmSettings();
     staffWithOfficeMailbox();
 
     $this->artisan('report:send-weekly')->assertSuccessful();
@@ -81,22 +81,22 @@ test('it skips sending when gm email is set but gm name is missing', function ()
     Mail::assertNothingSent();
 });
 
-test('it fails when office mailbox SMTP settings are not configured', function () {
+test('it skips gracefully when no active staff has an office mailbox configured', function () {
     Mail::fake();
 
-    ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
-    staffWithOfficeMailbox();
+    configureGmSettings();
+    User::factory()->create(['office_email' => null, 'office_email_password' => null]);
 
-    $this->artisan('report:send-weekly')->assertFailed();
+    $this->artisan('report:send-weekly')->assertSuccessful();
 
     Mail::assertNothingSent();
 });
 
-test('it skips gracefully when no active staff has an office mailbox configured', function () {
+test('it excludes staff whose office mailbox is missing SMTP host/port/encryption', function () {
     Mail::fake();
 
-    configureOfficeMailSettings();
-    User::factory()->create(['office_email' => null, 'office_email_password' => null]);
+    configureGmSettings();
+    staffWithOfficeMailbox(['office_mail_host' => null]);
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -106,7 +106,7 @@ test('it skips gracefully when no active staff has an office mailbox configured'
 test('it excludes inactive staff even if they have an office mailbox configured', function () {
     Mail::fake();
 
-    configureOfficeMailSettings();
+    configureGmSettings();
     staffWithOfficeMailbox(['is_active' => false]);
 
     $this->artisan('report:send-weekly')->assertSuccessful();

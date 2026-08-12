@@ -29,10 +29,13 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $remember_token
  * @property string|null $office_email
  * @property string|null $office_email_password
+ * @property string|null $office_mail_host
+ * @property int|null $office_mail_port
+ * @property 'ssl'|'tls'|null $office_mail_encryption
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'office_email', 'office_email_password'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'office_email', 'office_email_password', 'office_mail_host', 'office_mail_port', 'office_mail_encryption'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'office_email_password'])]
 class User extends Authenticatable implements PasskeyUser
 {

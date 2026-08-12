@@ -13,6 +13,9 @@ import type { User } from '@/types';
 
 defineProps<{
     user: Pick<User, 'id' | 'name' | 'email' | 'role' | 'is_active' | 'office_email'> & {
+        office_mail_host: string | null;
+        office_mail_port: number | null;
+        office_mail_encryption: 'ssl' | 'tls' | null;
         has_office_email_password: boolean;
     };
 }>();
@@ -124,6 +127,47 @@ defineOptions({
                     }}
                 </p>
                 <InputError :message="errors.office_email_password" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="office_mail_host">Host SMTP</Label>
+                <Input
+                    id="office_mail_host"
+                    name="office_mail_host"
+                    :default-value="user.office_mail_host ?? ''"
+                    autocomplete="off"
+                    placeholder="mail.perusahaan.com"
+                />
+                <InputError :message="errors.office_mail_host" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="grid gap-2">
+                    <Label for="office_mail_port">Port</Label>
+                    <Input
+                        id="office_mail_port"
+                        type="number"
+                        name="office_mail_port"
+                        :default-value="user.office_mail_port ?? ''"
+                        autocomplete="off"
+                        placeholder="465"
+                    />
+                    <InputError :message="errors.office_mail_port" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="office_mail_encryption">Enkripsi</Label>
+                    <Select name="office_mail_encryption" :default-value="user.office_mail_encryption ?? undefined">
+                        <SelectTrigger id="office_mail_encryption" class="w-full">
+                            <SelectValue placeholder="Pilih" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="ssl">SSL</SelectItem>
+                            <SelectItem value="tls">TLS</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <InputError :message="errors.office_mail_encryption" />
+                </div>
             </div>
 
             <Button :disabled="processing" type="submit">Save</Button>

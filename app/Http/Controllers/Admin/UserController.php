@@ -49,7 +49,10 @@ class UserController extends Controller
     {
         return Inertia::render('admin/users/Edit', [
             'user' => [
-                ...$user->only('id', 'name', 'email', 'role', 'is_active', 'office_email'),
+                ...$user->only(
+                    'id', 'name', 'email', 'role', 'is_active',
+                    'office_email', 'office_mail_host', 'office_mail_port', 'office_mail_encryption',
+                ),
                 'has_office_email_password' => $user->office_email_password !== null,
             ],
         ]);

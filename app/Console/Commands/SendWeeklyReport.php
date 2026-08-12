@@ -30,16 +30,13 @@ class SendWeeklyReport extends Command
             return self::SUCCESS;
         }
 
-        if (! $setting->office_mail_host || ! $setting->office_mail_port || ! $setting->office_mail_encryption) {
-            $this->error('Office mailbox SMTP settings (host/port/encryption) are not configured.');
-
-            return self::FAILURE;
-        }
-
         $staff = User::query()
             ->where('is_active', true)
             ->whereNotNull('office_email')
             ->whereNotNull('office_email_password')
+            ->whereNotNull('office_mail_host')
+            ->whereNotNull('office_mail_port')
+            ->whereNotNull('office_mail_encryption')
             ->get();
 
         if ($staff->isEmpty()) {
@@ -64,9 +61,9 @@ class SendWeeklyReport extends Command
             $mailerName = "office-smtp-{$member->id}";
             config(["mail.mailers.{$mailerName}" => [
                 'transport' => 'smtp',
-                'host' => $setting->office_mail_host,
-                'port' => $setting->office_mail_port,
-                'encryption' => $setting->office_mail_encryption,
+                'host' => $member->office_mail_host,
+                'port' => $member->office_mail_port,
+                'encryption' => $member->office_mail_encryption,
                 'username' => $member->office_email,
                 'password' => $member->office_email_password,
             ]]);

@@ -33,6 +33,9 @@ class StoreUserRequest extends FormRequest
             'role' => ['required', Rule::in(['admin', 'staff'])],
             'office_email' => ['nullable', 'email', 'max:255'],
             'office_email_password' => ['nullable', 'string', 'required_with:office_email'],
+            'office_mail_host' => ['nullable', 'string', 'max:255', 'required_with:office_email'],
+            'office_mail_port' => ['nullable', 'integer', 'between:1,65535', 'required_with:office_email'],
+            'office_mail_encryption' => ['nullable', Rule::in(['ssl', 'tls']), 'required_with:office_email'],
         ];
     }
 }
