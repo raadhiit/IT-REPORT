@@ -3,6 +3,7 @@
 use App\Models\Activity;
 use App\Models\ActivityAttachment;
 use App\Models\User;
+use App\Services\WeeklyReportAggregator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
@@ -124,4 +125,49 @@ test('an admin can download any users attachment', function () {
     $response = $this->actingAs($admin)->get(route('activity-attachments.show', $attachment));
 
     $response->assertOk();
+});
+
+test('the activity list defaults to the current week', function () {
+    $user = User::factory()->create();
+    [$start, $end] = WeeklyReportAggregator::currentWeek();
+
+    $inWeek = Activity::factory()->for($user)->create(['tanggal' => $start->toDateString(), 'deskripsi' => 'In week']);
+    Activity::factory()->for($user)->create(['tanggal' => $start->subDay()->toDateString(), 'deskripsi' => 'Last week']);
+
+    $response = $this->actingAs($user)->get(route('activities.index'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('from', $start->toDateString())
+        ->where('to', $end->toDateString())
+        ->has('activities', 1)
+        ->where('activities.0.id', $inWeek->id)
+    );
+});
+
+test('the activity list can be filtered by a custom date range', function () {
+    $user = User::factory()->create();
+    Activity::factory()->for($user)->create(['tanggal' => '2026-07-01', 'deskripsi' => 'July']);
+    Activity::factory()->for($user)->create(['tanggal' => '2026-08-01', 'deskripsi' => 'August']);
+
+    $response = $this->actingAs($user)->get(route('activities.index', ['from' => '2026-07-01', 'to' => '2026-07-31']));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('from', '2026-07-01')
+        ->where('to', '2026-07-31')
+        ->has('activities', 1)
+        ->where('activities.0.deskripsi', 'July')
+    );
+});
+
+test('an invalid date range falls back to the current week instead of erroring', function () {
+    $user = User::factory()->create();
+    [$start, $end] = WeeklyReportAggregator::currentWeek();
+
+    $response = $this->actingAs($user)->get(route('activities.index', ['from' => 'not-a-date', 'to' => 'also-not-a-date']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('from', $start->toDateString())
+        ->where('to', $end->toDateString())
+    );
 });

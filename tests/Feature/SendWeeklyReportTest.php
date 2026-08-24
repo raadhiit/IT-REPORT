@@ -1,10 +1,14 @@
 <?php
 
+use App\Enums\WeeklyReportLogStatus;
 use App\Mail\WeeklyReportMail;
 use App\Models\Activity;
 use App\Models\ReportSetting;
 use App\Models\User;
+use App\Models\WeeklyReportLog;
+use App\Services\WeeklyReportExcelExporter;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 function configureGmSettings(array $overrides = []): ReportSetting
 {
@@ -112,4 +116,53 @@ test('it excludes inactive staff even if they have an office mailbox configured'
     $this->artisan('report:send-weekly')->assertSuccessful();
 
     Mail::assertNothingSent();
+});
+
+test('a successful send is logged with the excel file archived', function () {
+    Storage::fake('local');
+    Mail::fake();
+    configureGmSettings();
+
+    $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
+    Activity::factory()->for($radhit)->create();
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    $log = WeeklyReportLog::first();
+    expect($log)->not->toBeNull();
+    expect($log->user_id)->toBe($radhit->id);
+    expect($log->status)->toBe(WeeklyReportLogStatus::Sent);
+    expect($log->recipient_email)->toBe('gm@example.com');
+    expect($log->excel_path)->not->toBeNull();
+    Storage::disk('local')->assertExists($log->excel_path);
+});
+
+test('it isolates failures per staff, so one failing send does not block the others', function () {
+    Mail::fake();
+    configureGmSettings();
+
+    $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
+    $budi = staffWithOfficeMailbox(['name' => 'Budi']);
+
+    $this->mock(WeeklyReportExcelExporter::class, function ($mock) use ($budi) {
+        $mock->shouldReceive('build')->andReturnUsing(function ($report, $start, $end, $name) use ($budi) {
+            if ($name === $budi->name) {
+                throw new RuntimeException('Simulated export failure');
+            }
+
+            return (new WeeklyReportExcelExporter)->build($report, $start, $end, $name);
+        });
+    });
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    Mail::assertSentCount(1);
+    Mail::assertSent(WeeklyReportMail::class, fn (WeeklyReportMail $mail) => $mail->hasFrom($radhit->office_email));
+
+    $sentLog = WeeklyReportLog::where('user_id', $radhit->id)->first();
+    expect($sentLog->status)->toBe(WeeklyReportLogStatus::Sent);
+
+    $failedLog = WeeklyReportLog::where('user_id', $budi->id)->first();
+    expect($failedLog->status)->toBe(WeeklyReportLogStatus::Failed);
+    expect($failedLog->error_message)->toContain('Simulated export failure');
 });

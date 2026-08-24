@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReportSetting;
+use App\Models\WeeklyReportLog;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MonitoringController extends Controller
 {
@@ -41,7 +44,39 @@ class MonitoringController extends Controller
                 'server_time' => $now->format('Y-m-d H:i:s'),
             ],
             'recentLog' => $this->tailLog(storage_path('logs/laravel.log')),
+            'reportLogs' => WeeklyReportLog::query()
+                ->with('user:id,name')
+                ->latest()
+                ->latest('id')
+                ->limit(50)
+                ->get()
+                ->map(fn (WeeklyReportLog $log) => [
+                    'id' => $log->id,
+                    'staff' => $log->user->name,
+                    'period_start' => $log->period_start->toDateString(),
+                    'period_end' => $log->period_end->toDateString(),
+                    'status' => $log->status->value,
+                    'status_label' => $log->status->label(),
+                    'recipient_email' => $log->recipient_email,
+                    'error_message' => $log->error_message,
+                    'has_excel' => $log->excel_path !== null,
+                    'sent_at' => $log->created_at->format('Y-m-d H:i'),
+                ]),
         ]);
+    }
+
+    /**
+     * Download the Excel file archived for a weekly report send attempt.
+     */
+    public function downloadExcel(WeeklyReportLog $weeklyReportLog): StreamedResponse
+    {
+        if (! $weeklyReportLog->excel_path || ! Storage::disk('local')->exists($weeklyReportLog->excel_path)) {
+            abort(404);
+        }
+
+        $filename = "laporan-mingguan-{$weeklyReportLog->user->name}-{$weeklyReportLog->period_start->toDateString()}.xlsx";
+
+        return Storage::disk('local')->download($weeklyReportLog->excel_path, $filename);
     }
 
     /**

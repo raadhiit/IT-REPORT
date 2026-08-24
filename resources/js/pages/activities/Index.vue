@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, router } from '@inertiajs/vue3';
 import { Paperclip } from '@lucide/vue';
+import { ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,8 @@ const props = defineProps<{
     categories: ActivityCategoryOption[];
     lastCategory: ActivityCategoryValue | null;
     today: string;
+    from: string;
+    to: string;
 }>();
 
 defineOptions({
@@ -26,6 +29,17 @@ defineOptions({
         breadcrumbs: [{ title: 'Activities', href: index() }],
     },
 });
+
+const filterFrom = ref(props.from);
+const filterTo = ref(props.to);
+
+function applyFilter(): void {
+    router.get(
+        index().url,
+        { from: filterFrom.value, to: filterTo.value },
+        { preserveState: true, preserveScroll: true, only: ['activities', 'from', 'to'] },
+    );
+}
 
 function categoryLabel(value: ActivityCategoryValue): string {
     return props.categories.find((category) => category.value === value)?.label ?? value;
@@ -113,6 +127,17 @@ function formatDate(date: string): string {
                 </Form>
             </CardContent>
         </Card>
+
+        <div class="flex flex-wrap items-end gap-4">
+            <div class="grid gap-2">
+                <Label for="filter_from">Dari tanggal</Label>
+                <Input id="filter_from" v-model="filterFrom" type="date" class="w-40" @change="applyFilter" />
+            </div>
+            <div class="grid gap-2">
+                <Label for="filter_to">Sampai tanggal</Label>
+                <Input id="filter_to" v-model="filterTo" type="date" class="w-40" @change="applyFilter" />
+            </div>
+        </div>
 
         <Card class="overflow-hidden py-0">
             <CardContent class="overflow-x-auto p-0">

@@ -12,4 +12,5 @@ Route::middleware(['auth', 'can:admin'])->prefix('admin')->name('admin.')->group
     Route::get('report-settings', [ReportSettingController::class, 'edit'])->name('report-settings.edit');
     Route::put('report-settings', [ReportSettingController::class, 'update'])->name('report-settings.update');
     Route::get('monitoring', [MonitoringController::class, 'index'])->name('monitoring.index');
+    Route::get('monitoring/weekly-report-logs/{weeklyReportLog}/excel', [MonitoringController::class, 'downloadExcel'])->name('monitoring.report-logs.excel');
 });
