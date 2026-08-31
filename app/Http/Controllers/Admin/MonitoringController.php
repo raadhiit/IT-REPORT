@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ReportSetting;
 use App\Models\WeeklyReportLog;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -63,6 +65,18 @@ class MonitoringController extends Controller
                     'sent_at' => $log->created_at->format('Y-m-d H:i'),
                 ]),
         ]);
+    }
+
+    /**
+     * Manually trigger the weekly report send now, bypassing the cron schedule.
+     */
+    public function sendNow(): RedirectResponse
+    {
+        Artisan::call('report:send-weekly');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Weekly report send triggered.')]);
+
+        return back();
     }
 
     /**

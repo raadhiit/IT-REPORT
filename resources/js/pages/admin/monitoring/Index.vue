@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
-import { FileDown } from '@lucide/vue';
+import { Head, router } from '@inertiajs/vue3';
+import { FileDown, Send } from '@lucide/vue';
+import { ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import monitoring, { index } from '@/routes/admin/monitoring';
+
+const sending = ref(false);
+const confirmOpen = ref(false);
+
+function sendNow() {
+    sending.value = true;
+    confirmOpen.value = false;
+    router.post(monitoring.sendNow().url, {}, { onFinish: () => (sending.value = false) });
+}
 
 defineProps<{
     schedule: {
@@ -47,8 +59,12 @@ defineOptions({
         <Heading title="Monitoring" description="Status cron laporan mingguan dan log aplikasi terbaru" />
 
         <Card>
-            <CardHeader>
+            <CardHeader class="flex flex-row items-center justify-between">
                 <CardTitle>Status cron laporan mingguan</CardTitle>
+                <Button size="sm" :disabled="sending" @click="confirmOpen = true">
+                    <Send class="size-3.5" />
+                    {{ sending ? 'Mengirim…' : 'Kirim Sekarang' }}
+                </Button>
             </CardHeader>
             <CardContent class="grid gap-3 text-sm sm:grid-cols-2">
                 <div>
@@ -130,4 +146,19 @@ defineOptions({
             </CardContent>
         </Card>
     </div>
+
+    <Dialog v-model:open="confirmOpen">
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Kirim laporan sekarang?</DialogTitle>
+                <DialogDescription>
+                    Email laporan mingguan akan langsung dikirim ke GM/SPV dari setiap staff aktif yang punya mailbox kantor
+                    terkonfigurasi. Aksi ini tidak bisa dibatalkan.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter show-close-button>
+                <Button :disabled="sending" @click="sendNow">Ya, kirim sekarang</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>

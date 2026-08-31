@@ -4,6 +4,7 @@ use App\Enums\WeeklyReportLogStatus;
 use App\Models\ReportSetting;
 use App\Models\User;
 use App\Models\WeeklyReportLog;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 test('admin can view monitoring', function () {
@@ -102,6 +103,32 @@ test('downloading excel for a log without an archived file 404s', function () {
     $response = $this->actingAs($admin)->get(route('admin.monitoring.report-logs.excel', $log));
 
     $response->assertNotFound();
+});
+
+test('admin can manually trigger the weekly report send', function () {
+    Mail::fake();
+    $admin = User::factory()->admin()->create();
+    ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
+    User::factory()->create([
+        'office_email' => 'staff@example.com',
+        'office_email_password' => 'secret',
+        'office_mail_host' => 'mail.example.com',
+        'office_mail_port' => 465,
+        'office_mail_encryption' => 'ssl',
+    ]);
+
+    $response = $this->actingAs($admin)->post(route('admin.monitoring.send-now'));
+
+    $response->assertRedirect();
+    expect(WeeklyReportLog::count())->toBe(1);
+});
+
+test('staff cannot manually trigger the weekly report send', function () {
+    $staff = User::factory()->create();
+
+    $response = $this->actingAs($staff)->post(route('admin.monitoring.send-now'));
+
+    $response->assertForbidden();
 });
 
 test('staff cannot download an archived excel', function () {
