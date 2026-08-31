@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\SendManualReportRequest;
 use App\Models\ReportSetting;
+use App\Models\User;
 use App\Models\WeeklyReportLog;
+use App\Services\WeeklyReportAggregator;
+use App\Services\WeeklyReportSender;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -33,8 +36,12 @@ class MonitoringController extends Controller
     {
         $setting = ReportSetting::current();
         $now = CarbonImmutable::now('Asia/Jakarta');
+        [$defaultFrom, $defaultTo] = WeeklyReportAggregator::currentWeek();
 
         return Inertia::render('admin/monitoring/Index', [
+            'staffOptions' => User::eligibleForWeeklyReport()->orderBy('name')->get(['id', 'name']),
+            'defaultFrom' => $defaultFrom->toDateString(),
+            'defaultTo' => $defaultTo->toDateString(),
             'schedule' => [
                 'send_day_label' => CarbonImmutable::now()
                     ->startOfWeek(CarbonImmutable::SUNDAY)
@@ -68,11 +75,40 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Manually trigger the weekly report send now, bypassing the cron schedule.
+     * Manually trigger a weekly report send, bypassing the cron schedule. Admin picks which
+     * staff to send for (defaults to all eligible staff) and the period to report on.
      */
-    public function sendNow(): RedirectResponse
+    public function sendManual(SendManualReportRequest $request, WeeklyReportSender $sender): RedirectResponse
     {
-        Artisan::call('report:send-weekly');
+        $setting = ReportSetting::current();
+
+        if (! $setting->gm_email || ! $setting->gm_name) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('Report settings has no GM email/name configured.')]);
+
+            return back();
+        }
+
+        $staffQuery = User::eligibleForWeeklyReport();
+        $userIds = $request->validated('user_ids') ?? [];
+
+        if ($userIds !== []) {
+            $staffQuery->whereIn('id', $userIds);
+        }
+
+        $staff = $staffQuery->get();
+
+        if ($staff->isEmpty()) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => __('No eligible staff found for the selected recipients.')]);
+
+            return back();
+        }
+
+        $start = CarbonImmutable::parse($request->validated('from'));
+        $end = CarbonImmutable::parse($request->validated('to'));
+
+        foreach ($staff as $member) {
+            $sender->send($member, $setting, $start, $end);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Weekly report send triggered.')]);
 

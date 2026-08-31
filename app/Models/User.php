@@ -6,6 +6,7 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -74,5 +75,22 @@ class User extends Authenticatable implements PasskeyUser
     public function activities(): HasMany
     {
         return $this->hasMany(Activity::class);
+    }
+
+    /**
+     * Scope to active staff with an office mailbox fully configured — the only staff the
+     * weekly report can actually be sent from (automated cron or manual admin trigger).
+     *
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeEligibleForWeeklyReport(Builder $query): Builder
+    {
+        return $query->where('is_active', true)
+            ->whereNotNull('office_email')
+            ->whereNotNull('office_email_password')
+            ->whereNotNull('office_mail_host')
+            ->whereNotNull('office_mail_port')
+            ->whereNotNull('office_mail_encryption');
     }
 }

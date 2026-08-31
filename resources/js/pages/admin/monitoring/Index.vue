@@ -1,24 +1,18 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { FileDown, Send } from '@lucide/vue';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import monitoring, { index } from '@/routes/admin/monitoring';
 
-const sending = ref(false);
-const confirmOpen = ref(false);
-
-function sendNow() {
-    sending.value = true;
-    confirmOpen.value = false;
-    router.post(monitoring.sendNow().url, {}, { onFinish: () => (sending.value = false) });
-}
-
-defineProps<{
+const props = defineProps<{
     schedule: {
         send_day_label: string;
         send_time: string;
@@ -39,7 +33,37 @@ defineProps<{
         has_excel: boolean;
         sent_at: string;
     }[];
+    staffOptions: { id: number; name: string }[];
+    defaultFrom: string;
+    defaultTo: string;
 }>();
+
+const sending = ref(false);
+const confirmOpen = ref(false);
+const selectAll = ref(true);
+const selectedStaffIds = ref<number[]>([]);
+const from = ref(props.defaultFrom);
+const to = ref(props.defaultTo);
+
+const recipientCount = computed(() => (selectAll.value ? props.staffOptions.length : selectedStaffIds.value.length));
+
+function toggleStaff(id: number, checked: boolean) {
+    selectedStaffIds.value = checked ? [...selectedStaffIds.value, id] : selectedStaffIds.value.filter((staffId) => staffId !== id);
+}
+
+function sendManual() {
+    sending.value = true;
+    confirmOpen.value = false;
+    router.post(
+        monitoring.sendManual().url,
+        {
+            user_ids: selectAll.value ? [] : selectedStaffIds.value,
+            from: from.value,
+            to: to.value,
+        },
+        { onFinish: () => (sending.value = false) },
+    );
+}
 
 function formatDate(date: string): string {
     return new Date(`${date}T00:00:00`).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
@@ -150,14 +174,47 @@ defineOptions({
     <Dialog v-model:open="confirmOpen">
         <DialogContent>
             <DialogHeader>
-                <DialogTitle>Kirim laporan sekarang?</DialogTitle>
+                <DialogTitle>Kirim laporan mingguan manual</DialogTitle>
                 <DialogDescription>
-                    Email laporan mingguan akan langsung dikirim ke GM/SPV dari setiap staff aktif yang punya mailbox kantor
-                    terkonfigurasi. Aksi ini tidak bisa dibatalkan.
+                    Email akan langsung dikirim ke GM/SPV, satu email per staff terpilih dari mailbox kantor masing-masing.
+                    Aksi ini tidak bisa dibatalkan.
                 </DialogDescription>
             </DialogHeader>
+
+            <div class="space-y-4">
+                <div class="grid gap-2">
+                    <Label>Kirim untuk staff</Label>
+                    <div class="flex items-center gap-2">
+                        <Checkbox id="select_all" v-model:model-value="selectAll" />
+                        <Label for="select_all" class="font-normal">Semua staff aktif ({{ staffOptions.length }})</Label>
+                    </div>
+                    <div v-if="!selectAll" class="grid max-h-40 gap-2 overflow-y-auto rounded-md border p-3">
+                        <div v-for="staff in staffOptions" :key="staff.id" class="flex items-center gap-2">
+                            <Checkbox
+                                :id="`staff_${staff.id}`"
+                                :model-value="selectedStaffIds.includes(staff.id)"
+                                @update:model-value="(checked) => toggleStaff(staff.id, checked === true)"
+                            />
+                            <Label :for="`staff_${staff.id}`" class="font-normal">{{ staff.name }}</Label>
+                        </div>
+                        <p v-if="staffOptions.length === 0" class="text-sm text-muted-foreground">Tidak ada staff dengan mailbox kantor terkonfigurasi.</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="grid flex-1 gap-2">
+                        <Label for="manual_from">Dari tanggal</Label>
+                        <Input id="manual_from" v-model="from" type="date" />
+                    </div>
+                    <div class="grid flex-1 gap-2">
+                        <Label for="manual_to">Sampai tanggal</Label>
+                        <Input id="manual_to" v-model="to" type="date" />
+                    </div>
+                </div>
+            </div>
+
             <DialogFooter show-close-button>
-                <Button :disabled="sending" @click="sendNow">Ya, kirim sekarang</Button>
+                <Button :disabled="sending || recipientCount === 0" @click="sendManual">Kirim ke {{ recipientCount }} staff</Button>
             </DialogFooter>
         </DialogContent>
     </Dialog>

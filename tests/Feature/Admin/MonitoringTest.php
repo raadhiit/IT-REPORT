@@ -1,11 +1,24 @@
 <?php
 
 use App\Enums\WeeklyReportLogStatus;
+use App\Mail\WeeklyReportMail;
 use App\Models\ReportSetting;
 use App\Models\User;
 use App\Models\WeeklyReportLog;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+
+function monitoringStaffWithOfficeMailbox(array $attributes = []): User
+{
+    return User::factory()->create([
+        'office_email' => fake()->unique()->safeEmail(),
+        'office_email_password' => 'secret',
+        'office_mail_host' => 'mail.example.com',
+        'office_mail_port' => 465,
+        'office_mail_encryption' => 'ssl',
+        ...$attributes,
+    ]);
+}
 
 test('admin can view monitoring', function () {
     $admin = User::factory()->admin()->create();
@@ -105,28 +118,94 @@ test('downloading excel for a log without an archived file 404s', function () {
     $response->assertNotFound();
 });
 
-test('admin can manually trigger the weekly report send', function () {
+test('admin can manually trigger the weekly report send for all eligible staff', function () {
     Mail::fake();
     $admin = User::factory()->admin()->create();
     ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
-    User::factory()->create([
-        'office_email' => 'staff@example.com',
-        'office_email_password' => 'secret',
-        'office_mail_host' => 'mail.example.com',
-        'office_mail_port' => 465,
-        'office_mail_encryption' => 'ssl',
+    $radhit = monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
+    $budi = monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+
+    $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
+        'from' => '2026-08-24',
+        'to' => '2026-08-30',
     ]);
 
-    $response = $this->actingAs($admin)->post(route('admin.monitoring.send-now'));
+    $response->assertRedirect();
+    Mail::assertSentCount(2);
+    expect(WeeklyReportLog::where('user_id', $radhit->id)->exists())->toBeTrue();
+    expect(WeeklyReportLog::where('user_id', $budi->id)->exists())->toBeTrue();
+});
+
+test('an explicit empty user_ids array (the "all staff" default sent by the UI) still sends to everyone', function () {
+    Mail::fake();
+    $admin = User::factory()->admin()->create();
+    ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
+    monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
+    monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+
+    $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
+        'user_ids' => [],
+        'from' => '2026-08-24',
+        'to' => '2026-08-30',
+    ]);
 
     $response->assertRedirect();
-    expect(WeeklyReportLog::count())->toBe(1);
+    Mail::assertSentCount(2);
+});
+
+test('admin can manually trigger the weekly report send for a single staff member', function () {
+    Mail::fake();
+    $admin = User::factory()->admin()->create();
+    ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
+    $radhit = monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
+    monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+
+    $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
+        'user_ids' => [$radhit->id],
+        'from' => '2026-08-24',
+        'to' => '2026-08-30',
+    ]);
+
+    $response->assertRedirect();
+    Mail::assertSentCount(1);
+    Mail::assertSent(WeeklyReportMail::class, fn (WeeklyReportMail $mail) => $mail->hasFrom($radhit->office_email));
+});
+
+test('manual send uses the requested date range instead of the current week', function () {
+    Mail::fake();
+    $admin = User::factory()->admin()->create();
+    ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
+    $radhit = monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
+
+    $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
+        'user_ids' => [$radhit->id],
+        'from' => '2026-07-01',
+        'to' => '2026-07-07',
+    ]);
+
+    $log = WeeklyReportLog::where('user_id', $radhit->id)->first();
+    expect($log->period_start->toDateString())->toBe('2026-07-01');
+    expect($log->period_end->toDateString())->toBe('2026-07-07');
+});
+
+test('manual send validates the date range', function () {
+    $admin = User::factory()->admin()->create();
+
+    $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
+        'from' => '2026-08-30',
+        'to' => '2026-08-24',
+    ]);
+
+    $response->assertInvalid('to');
 });
 
 test('staff cannot manually trigger the weekly report send', function () {
     $staff = User::factory()->create();
 
-    $response = $this->actingAs($staff)->post(route('admin.monitoring.send-now'));
+    $response = $this->actingAs($staff)->post(route('admin.monitoring.send-manual'), [
+        'from' => '2026-08-24',
+        'to' => '2026-08-30',
+    ]);
 
     $response->assertForbidden();
 });
