@@ -28,7 +28,7 @@ class StoreActivityRequest extends FormRequest
         return [
             'tanggal' => ['required', 'date'],
             'kategori' => ['required', new Enum(ActivityCategory::class)],
-            'deskripsi' => ['required', 'string', 'max:500'],
+            'deskripsi' => ['required', 'string'],
             'attachments' => ['array', 'max:5'],
             'attachments.*' => [Rule::file()->max(2048)->extensions(['pdf', 'png', 'jpg', 'jpeg', 'docx'])],
         ];

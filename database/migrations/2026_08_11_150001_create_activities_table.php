@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->date('tanggal');
             $table->enum('kategori', ['maintenance', 'project', 'support', 'meeting', 'other']);
-            $table->string('deskripsi');
+            $table->string('deskripsi', 700);
             $table->timestamps();
 
             $table->index(['user_id', 'tanggal']);
