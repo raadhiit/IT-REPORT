@@ -1,7 +1,13 @@
-import type { ActivityCategoryValue } from './activity';
+import type { ActivityCategoryValue, ActivityStatusValue } from './activity';
 
 export type ReportCategoryCount = {
     value: ActivityCategoryValue;
+    label: string;
+    count: number;
+};
+
+export type ReportStatusCount = {
+    value: ActivityStatusValue;
     label: string;
     count: number;
 };
@@ -11,6 +17,7 @@ export type ReportStaffBreakdown = {
     name: string;
     total: number;
     byCategory: { value: ActivityCategoryValue; count: number }[];
+    byStatus: Record<ActivityStatusValue, number>;
 };
 
 export type ReportActivityDetail = {
@@ -18,6 +25,7 @@ export type ReportActivityDetail = {
     tanggal: string;
     deskripsi: string;
     staff: string;
+    status: ActivityStatusValue;
 };
 
 export type ReportCategoryDetail = {

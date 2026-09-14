@@ -68,6 +68,25 @@ test('it compares the current week total against last week and lists 7 days', fu
     );
 });
 
+test('it includes a status breakdown for the dashboard donut', function () {
+    $user = User::factory()->create();
+    [$start] = WeeklyReportAggregator::currentWeek();
+
+    Activity::factory()->for($user)->create(['tanggal' => $start->toDateString(), 'status' => 'selesai']);
+    Activity::factory()->for($user)->create(['tanggal' => $start->toDateString(), 'status' => 'selesai']);
+    Activity::factory()->for($user)->create(['tanggal' => $start->toDateString(), 'status' => 'pending']);
+
+    $response = $this->actingAs($user)->get(route('dashboard'));
+
+    $response->assertInertia(fn ($page) => $page
+        ->where('byStatus', fn ($statuses) => collect($statuses)->firstWhere('value', 'selesai')['count'] === 2)
+        ->where('byStatus', fn ($statuses) => collect($statuses)->firstWhere('value', 'pending')['count'] === 1)
+        // A staff member's own dashboard is scoped to themselves only, so byStaff stays empty here
+        // (matches the same admin-vs-staff scoping as the weekly report aggregator).
+        ->where('byStaff', [])
+    );
+});
+
 test('topCategory is null when nothing has been logged this week', function () {
     $user = User::factory()->create();
 

@@ -35,6 +35,8 @@ class DashboardController extends Controller
             'today' => $today,
             'topCategory' => $topCategory && $topCategory['count'] > 0 ? $topCategory : null,
             'byCategory' => $report['byCategory'],
+            'byStatus' => $report['byStatus'],
+            'byStaff' => $report['byStaff'],
             'dailyCounts' => $aggregator->dailyCounts($user, $start, $end),
         ]);
     }
