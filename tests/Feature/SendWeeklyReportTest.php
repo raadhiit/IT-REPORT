@@ -90,6 +90,22 @@ test('it skips sending when no gm email is configured', function () {
     Mail::assertNothingSent();
 });
 
+test('a skipped run (missing gm email) does not mark the day as sent, so it can retry once fixed', function () {
+    Mail::fake();
+
+    // Nothing configured yet — this run should skip without locking out a same-day retry.
+    $this->artisan('report:send-weekly')->assertSuccessful();
+    expect(ReportSetting::current()->last_sent_at)->toBeNull();
+
+    // Fix the config and retry the same day — it should now actually send.
+    configureGmSettings();
+    staffWithOfficeMailbox();
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    Mail::assertSentCount(1);
+    expect(ReportSetting::current()->last_sent_at)->not->toBeNull();
+});
+
 test('it skips sending when gm email is set but gm name is missing', function () {
     Mail::fake();
 

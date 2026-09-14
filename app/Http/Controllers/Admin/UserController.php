@@ -53,7 +53,10 @@ class UserController extends Controller
                     'id', 'name', 'email', 'role', 'is_active',
                     'office_email', 'office_mail_host', 'office_mail_port', 'office_mail_encryption',
                 ),
-                'has_office_email_password' => $user->office_email_password !== null,
+                // getRawOriginal(), not the cast attribute — an undecryptable value (e.g. encrypted
+                // under a previous APP_KEY, such as data imported from another server) must not
+                // crash this page just to answer "is a password set at all".
+                'has_office_email_password' => $user->getRawOriginal('office_email_password') !== null,
             ],
         ]);
     }

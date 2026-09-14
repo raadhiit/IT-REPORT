@@ -21,7 +21,6 @@ class SendWeeklyReport extends Command
     public function handle(WeeklyReportSender $sender): int
     {
         $setting = ReportSetting::current();
-        $setting->markSentNow();
 
         if (! $setting->gm_email || ! $setting->gm_name) {
             $this->warn('Report settings has no GM email/name configured — skipping.');
@@ -36,6 +35,11 @@ class SendWeeklyReport extends Command
 
             return self::SUCCESS;
         }
+
+        // Only mark today "handled" once we know we're actually attempting sends — marking it
+        // earlier (before these guards) would lock isDueAt() to false for the rest of the day
+        // even when nothing was sent, e.g. because GM email wasn't configured yet.
+        $setting->markSentNow();
 
         [$start, $end] = WeeklyReportAggregator::currentWeek();
 

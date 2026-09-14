@@ -25,6 +25,28 @@ test('guests are redirected to login', function () {
     $response->assertRedirect(route('login'));
 });
 
+test('admin can view the edit form for a user', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($admin)->get(route('admin.users.edit', $user));
+
+    $response->assertOk();
+});
+
+test('the edit form does not crash when office_email_password cannot be decrypted', function () {
+    // Simulates data imported from another server, encrypted under a different APP_KEY — a value
+    // like this must not throw when the edit page merely checks whether a password is set at all.
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->create();
+    $user->forceFill(['office_email_password' => 'not-a-valid-encrypted-payload'])->save();
+
+    $response = $this->actingAs($admin)->get(route('admin.users.edit', $user));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->where('user.has_office_email_password', true));
+});
+
 test('admin can create a user', function () {
     $admin = User::factory()->admin()->create();
 
