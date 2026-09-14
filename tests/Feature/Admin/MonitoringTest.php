@@ -75,9 +75,10 @@ test('it lists weekly report send attempts with their status', function () {
         ->has('reportLogs', 2)
         ->where('reportLogs.0.status', 'failed')
         ->where('reportLogs.0.error_message', 'Connection refused')
-        ->where('reportLogs.0.has_excel', false)
+        ->where('reportLogs.0.has_file', false)
         ->where('reportLogs.1.status', 'sent')
-        ->where('reportLogs.1.has_excel', true)
+        ->where('reportLogs.1.has_file', true)
+        ->where('reportLogs.1.file_extension', 'XLSX')
     );
 });
 

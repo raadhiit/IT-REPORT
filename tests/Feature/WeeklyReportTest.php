@@ -61,6 +61,32 @@ test('an admin sees every staff member aggregated by category', function () {
     );
 });
 
+test('the report breaks activities down by status and lists projects with progress', function () {
+    $staff = User::factory()->create();
+
+    Activity::factory()->for($staff)->create(['tanggal' => '2026-08-10', 'kategori' => 'support', 'status' => 'selesai']);
+    Activity::factory()->for($staff)->create(['tanggal' => '2026-08-11', 'kategori' => 'support', 'status' => 'pending']);
+    Activity::factory()->for($staff)->project()->create([
+        'tanggal' => '2026-08-12',
+        'status' => 'on_track',
+        'deskripsi' => 'Migrasi server file ke NAS baru',
+        'progress_percent' => 75,
+        'target_selesai' => '2026-08-20',
+    ]);
+
+    $response = $this->actingAs($staff)->get(route('reports.weekly'));
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('reports/Weekly')
+        ->where('byStatus', fn ($statuses) => collect($statuses)->firstWhere('value', 'selesai')['count'] === 1)
+        ->where('byStatus', fn ($statuses) => collect($statuses)->firstWhere('value', 'pending')['count'] === 1)
+        ->where('byStatus', fn ($statuses) => collect($statuses)->firstWhere('value', 'on_track')['count'] === 1)
+        ->where('projects.0.deskripsi', 'Migrasi server file ke NAS baru')
+        ->where('projects.0.progress_percent', 75)
+        ->where('projects.0.target_selesai', '2026-08-20'),
+    );
+});
+
 test('a user can download the weekly report as a pdf', function () {
     $user = User::factory()->create();
     Activity::factory()->for($user)->create(['tanggal' => '2026-08-10']);

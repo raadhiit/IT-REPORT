@@ -53,6 +53,22 @@ test('it sends one email per staff with an office mailbox configured, from that 
     Mail::assertSentCount(2);
 });
 
+test('a staff member set to pdf format receives a pdf attachment, not excel', function () {
+    Mail::fake();
+
+    configureGmSettings();
+    $radhit = staffWithOfficeMailbox(['name' => 'Radhit', 'report_format' => 'pdf']);
+    Activity::factory()->for($radhit)->create();
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    Mail::assertSentCount(1);
+
+    $log = WeeklyReportLog::first();
+    expect($log->status)->toBe(WeeklyReportLogStatus::Sent);
+    expect($log->excel_path)->toEndWith('.pdf');
+});
+
 test('it sends without cc when no spv email is configured', function () {
     Mail::fake();
 

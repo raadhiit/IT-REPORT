@@ -9,8 +9,13 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
+
+defineProps<{
+    reportFormats: { value: 'excel' | 'pdf'; label: string }[];
+}>();
 
 defineOptions({
     layout: {
@@ -71,6 +76,22 @@ const user = computed(() => page.props.auth.user);
                     placeholder="Email address"
                 />
                 <InputError class="mt-2" :message="errors.email" />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="report_format">Weekly report format</Label>
+                <Select name="report_format" :default-value="user.report_format">
+                    <SelectTrigger id="report_format" class="w-full">
+                        <SelectValue placeholder="Pilih format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem v-for="format in reportFormats" :key="format.value" :value="format.value">
+                            {{ format.label }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+                <p class="text-sm text-muted-foreground">Format file yang dikirim ke GM/SPV setiap minggu dari mailbox kantor kamu.</p>
+                <InputError class="mt-2" :message="errors.report_format" />
             </div>
 
             <div v-if="page.props.mustVerifyEmail && !user.email_verified_at">

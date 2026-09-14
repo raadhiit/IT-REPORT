@@ -6,17 +6,16 @@ use App\Enums\ActivityCategory;
 use App\Enums\ActivityStatus;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
-class StoreActivityRequest extends FormRequest
+class UpdateActivityRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()->can('update', $this->route('activity'));
     }
 
     /**
@@ -31,11 +30,8 @@ class StoreActivityRequest extends FormRequest
             'kategori' => ['required', new Enum(ActivityCategory::class)],
             'deskripsi' => ['required', 'string'],
             'status' => ['required', new Enum(ActivityStatus::class)],
-            // Only meaningful for kategori=project, but not enforced here — keeping the form frictionless for every other category.
             'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
             'target_selesai' => ['nullable', 'date'],
-            'attachments' => ['array', 'max:5'],
-            'attachments.*' => [Rule::file()->max(2048)->extensions(['pdf', 'png', 'jpg', 'jpeg', 'docx'])],
         ];
     }
 }

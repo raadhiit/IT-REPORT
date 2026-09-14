@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\ActivityCategory;
+use App\Enums\ActivityStatus;
 use App\Models\Activity;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -24,6 +25,19 @@ class ActivityFactory extends Factory
             'tanggal' => fake()->dateTimeBetween('-1 month')->format('Y-m-d'),
             'kategori' => fake()->randomElement(ActivityCategory::cases()),
             'deskripsi' => fake()->sentence(),
+            'status' => fake()->randomElement(ActivityStatus::cases()),
         ];
+    }
+
+    /**
+     * A project activity with progress tracking filled in.
+     */
+    public function project(): static
+    {
+        return $this->state(fn (): array => [
+            'kategori' => ActivityCategory::Project,
+            'progress_percent' => fake()->numberBetween(0, 100),
+            'target_selesai' => fake()->dateTimeBetween('now', '+2 months')->format('Y-m-d'),
+        ]);
     }
 }

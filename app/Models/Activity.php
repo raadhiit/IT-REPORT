@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ActivityCategory;
+use App\Enums\ActivityStatus;
 use Database\Factories\ActivityFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,10 +18,13 @@ use Illuminate\Support\Carbon;
  * @property Carbon $tanggal
  * @property ActivityCategory $kategori
  * @property string $deskripsi
+ * @property ActivityStatus $status
+ * @property int|null $progress_percent
+ * @property Carbon|null $target_selesai
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['user_id', 'tanggal', 'kategori', 'deskripsi'])]
+#[Fillable(['user_id', 'tanggal', 'kategori', 'deskripsi', 'status', 'progress_percent', 'target_selesai'])]
 class Activity extends Model
 {
     /** @use HasFactory<ActivityFactory> */
@@ -36,6 +40,8 @@ class Activity extends Model
         return [
             'tanggal' => 'date:Y-m-d',
             'kategori' => ActivityCategory::class,
+            'status' => ActivityStatus::class,
+            'target_selesai' => 'date:Y-m-d',
         ];
     }
 

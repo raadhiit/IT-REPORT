@@ -5,7 +5,7 @@ use App\Http\Controllers\ActivityController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->group(function () {
-    Route::resource('activities', ActivityController::class)->only(['index', 'store']);
+    Route::resource('activities', ActivityController::class)->only(['index', 'store', 'update']);
 
     Route::get('activity-attachments/{attachment}', [ActivityAttachmentController::class, 'show'])
         ->name('activity-attachments.show');

@@ -45,6 +45,7 @@ class WeeklyReportController extends Controller
             'end' => $end->toFormattedDateString(),
             'generatedAt' => CarbonImmutable::now()->toFormattedDateString(),
             'generatedBy' => $request->user()->name,
+            'dailyCounts' => $aggregator->dailyCounts($request->user(), $start, $end),
             ...$report,
         ]);
 

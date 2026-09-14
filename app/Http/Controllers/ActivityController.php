@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ActivityCategory;
+use App\Enums\ActivityStatus;
 use App\Http\Requests\StoreActivityRequest;
+use App\Http\Requests\UpdateActivityRequest;
+use App\Models\Activity;
 use App\Services\WeeklyReportAggregator;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -34,6 +37,8 @@ class ActivityController extends Controller
                 ->get(),
             'categories' => collect(ActivityCategory::cases())
                 ->map(fn (ActivityCategory $category) => ['value' => $category->value, 'label' => $category->label()]),
+            'statuses' => collect(ActivityStatus::cases())
+                ->map(fn (ActivityStatus $status) => ['value' => $status->value, 'label' => $status->label()]),
             'lastCategory' => $user->activities()->latest()->value('kategori'),
             'today' => now()->toDateString(),
             'from' => $from->toDateString(),
@@ -75,6 +80,18 @@ class ActivityController extends Controller
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Activity logged.')]);
+
+        return to_route('activities.index');
+    }
+
+    /**
+     * Update a previously logged activity (owner or admin only, enforced by UpdateActivityRequest).
+     */
+    public function update(UpdateActivityRequest $request, Activity $activity): RedirectResponse
+    {
+        $activity->update($request->validated());
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Activity updated.')]);
 
         return to_route('activities.index');
     }

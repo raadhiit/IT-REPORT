@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ReportFormat;
 use App\Models\User;
 
 test('profile page is displayed', function () {
@@ -20,6 +21,7 @@ test('profile information can be updated', function () {
         ->patch(route('profile.update'), [
             'name' => 'Test User',
             'email' => 'test@example.com',
+            'report_format' => 'excel',
         ]);
 
     $response
@@ -33,6 +35,22 @@ test('profile information can be updated', function () {
     expect($user->email_verified_at)->toBeNull();
 });
 
+test('a user can switch their own weekly report format to pdf', function () {
+    $user = User::factory()->create(['report_format' => 'excel']);
+
+    $response = $this
+        ->actingAs($user)
+        ->patch(route('profile.update'), [
+            'name' => $user->name,
+            'email' => $user->email,
+            'report_format' => 'pdf',
+        ]);
+
+    $response->assertSessionHasNoErrors();
+
+    expect($user->refresh()->report_format)->toBe(ReportFormat::Pdf);
+});
+
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
 
@@ -41,6 +59,7 @@ test('email verification status is unchanged when the email address is unchanged
         ->patch(route('profile.update'), [
             'name' => 'Test User',
             'email' => $user->email,
+            'report_format' => 'excel',
         ]);
 
     $response

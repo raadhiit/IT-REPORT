@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\ReportFormat;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -33,10 +34,11 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string|null $office_mail_host
  * @property int|null $office_mail_port
  * @property 'ssl'|'tls'|null $office_mail_encryption
+ * @property ReportFormat $report_format
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'office_email', 'office_email_password', 'office_mail_host', 'office_mail_port', 'office_mail_encryption'])]
+#[Fillable(['name', 'email', 'password', 'role', 'is_active', 'office_email', 'office_email_password', 'office_mail_host', 'office_mail_port', 'office_mail_encryption', 'report_format'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'office_email_password'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -56,6 +58,7 @@ class User extends Authenticatable implements PasskeyUser
             'is_active' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
             'office_email_password' => 'encrypted',
+            'report_format' => ReportFormat::class,
         ];
     }
 

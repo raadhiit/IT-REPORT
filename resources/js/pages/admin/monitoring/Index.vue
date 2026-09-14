@@ -30,7 +30,8 @@ const props = defineProps<{
         status_label: string;
         recipient_email: string;
         error_message: string | null;
-        has_excel: boolean;
+        has_file: boolean;
+        file_extension: string | null;
         sent_at: string;
     }[];
     staffOptions: { id: number; name: string }[];
@@ -125,7 +126,7 @@ defineOptions({
                             <th class="px-4 py-3 font-medium">Staff</th>
                             <th class="px-4 py-3 font-medium">Status</th>
                             <th class="px-4 py-3 font-medium">Keterangan</th>
-                            <th class="px-4 py-3 font-medium">Excel</th>
+                            <th class="px-4 py-3 font-medium">File</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -144,12 +145,12 @@ defineOptions({
                             </td>
                             <td class="px-4 py-3">
                                 <a
-                                    v-if="log.has_excel"
+                                    v-if="log.has_file"
                                     :href="monitoring.reportLogs.excel(log.id).url"
                                     class="flex items-center gap-1 text-primary hover:underline"
                                 >
                                     <FileDown class="size-3.5" />
-                                    Download
+                                    {{ log.file_extension }}
                                 </a>
                                 <span v-else class="text-muted-foreground">—</span>
                             </td>

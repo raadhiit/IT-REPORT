@@ -6,6 +6,7 @@ export type User = {
     role: 'admin' | 'staff';
     is_active: boolean;
     office_email: string | null;
+    report_format: 'excel' | 'pdf';
     email_verified_at: string | null;
     two_factor_enabled?: boolean;
     created_at: string;

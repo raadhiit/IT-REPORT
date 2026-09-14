@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ActivityCategory;
+use App\Enums\ActivityStatus;
 use App\Models\Activity;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -32,8 +33,10 @@ class WeeklyReportAggregator
      * @return array{
      *     total: int,
      *     byCategory: Collection<int, array{value: string, label: string, count: int}>,
-     *     byStaff: Collection<int, array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>}>,
-     *     detailsByCategory: Collection<int, array{value: string, label: string, activities: Collection<int, array{id: int, tanggal: string, deskripsi: string, staff: string}>}>,
+     *     byStatus: Collection<int, array{value: string, label: string, count: int}>,
+     *     byStaff: Collection<int, array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>, byStatus: array<string, int>}>,
+     *     detailsByCategory: Collection<int, array{value: string, label: string, activities: Collection<int, array{id: int, tanggal: string, deskripsi: string, staff: string, status: string}>}>,
+     *     projects: array<int, array{id: int, deskripsi: string, staff: string, progress_percent: int|null, target_selesai: string|null, status: string}>,
      * }
      */
     public function build(User $requestingUser, CarbonImmutable $start, CarbonImmutable $end): array
@@ -53,12 +56,23 @@ class WeeklyReportAggregator
             'count' => (int) ($categoryCounts[$category->value] ?? 0),
         ]);
 
-        $byStaff = $scopedToSelf ? collect() : $this->buildStaffBreakdown($requestingUser, $start, $end);
+        $statusCounts = $this->baseQuery($requestingUser, $scopedToSelf, $start, $end)
+            ->select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $byStatus = collect(ActivityStatus::cases())->map(fn (ActivityStatus $status) => [
+            'value' => $status->value,
+            'label' => $status->label(),
+            'count' => (int) ($statusCounts[$status->value] ?? 0),
+        ]);
+
+        $byStaff = collect($scopedToSelf ? [] : $this->buildStaffBreakdown($requestingUser, $start, $end)->all());
 
         $detailRows = $this->baseQuery($requestingUser, $scopedToSelf, $start, $end)
             ->with('user:id,name')
             ->orderBy('tanggal')
-            ->get(['id', 'user_id', 'tanggal', 'kategori', 'deskripsi']);
+            ->get(['id', 'user_id', 'tanggal', 'kategori', 'status', 'deskripsi', 'progress_percent', 'target_selesai']);
 
         $detailsByCategory = collect(ActivityCategory::cases())->map(fn (ActivityCategory $category) => [
             'value' => $category->value,
@@ -68,14 +82,23 @@ class WeeklyReportAggregator
                 'tanggal' => $activity->tanggal->toDateString(),
                 'deskripsi' => $activity->deskripsi,
                 'staff' => $activity->user->name,
+                'status' => $activity->status->value,
             ])->values(),
         ]);
+
+        $projects = $detailRows->where('kategori', ActivityCategory::Project)
+            ->sortBy(fn (Activity $activity) => $activity->target_selesai?->toDateString() ?? '9999-12-31')
+            ->map(fn (Activity $activity) => $this->buildProjectRow($activity))
+            ->values()
+            ->all();
 
         return [
             'total' => $total,
             'byCategory' => $byCategory,
+            'byStatus' => $byStatus,
             'byStaff' => $byStaff,
             'detailsByCategory' => $detailsByCategory,
+            'projects' => $projects,
         ];
     }
 
@@ -106,29 +129,63 @@ class WeeklyReportAggregator
     }
 
     /**
-     * @return Collection<int, array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>}>
+     * @return Collection<int, array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>, byStatus: array<string, int>}>
      */
     private function buildStaffBreakdown(User $requestingUser, CarbonImmutable $start, CarbonImmutable $end): Collection
     {
         $rows = $this->baseQuery($requestingUser, false, $start, $end)
-            ->select('user_id', 'kategori', DB::raw('count(*) as total'))
-            ->groupBy('user_id', 'kategori')
+            ->select('user_id', 'kategori', 'status', DB::raw('count(*) as total'))
+            ->groupBy('user_id', 'kategori', 'status')
             ->get();
 
         $names = User::whereIn('id', $rows->pluck('user_id')->unique())->pluck('name', 'id');
 
         return $rows->groupBy('user_id')
-            ->map(fn (Collection $categoryRows, int $userId) => [
-                'id' => $userId,
-                'name' => (string) ($names[$userId] ?? '—'),
-                'total' => (int) $categoryRows->sum(fn (Activity $row) => $row->getAttribute('total')),
-                'byCategory' => $categoryRows->map(fn (Activity $row) => [
-                    'value' => $row->kategori->value,
-                    'count' => (int) $row->getAttribute('total'),
-                ])->values(),
-            ])
+            ->map(fn (Collection $rowsForUser, int $userId) => $this->buildStaffRow($userId, $rowsForUser, $names))
             ->sortByDesc('total')
             ->values();
+    }
+
+    /**
+     * @param  Collection<int, Activity>  $rowsForUser  Grouped rows (user_id, kategori, status, total) for one staff member.
+     * @param  Collection<int, string>  $names
+     * @return array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>, byStatus: array<string, int>}
+     */
+    private function buildStaffRow(int $userId, Collection $rowsForUser, Collection $names): array
+    {
+        $byCategory = $rowsForUser->groupBy(fn (Activity $row) => $row->kategori->value)
+            ->map(fn (Collection $categoryRows, string $value) => [
+                'value' => $value,
+                'count' => (int) $categoryRows->sum(fn (Activity $row) => $row->getAttribute('total')),
+            ])->values();
+
+        $byStatus = [];
+        foreach (ActivityStatus::cases() as $status) {
+            $byStatus[$status->value] = (int) $rowsForUser->where('status', $status)->sum(fn (Activity $row) => $row->getAttribute('total'));
+        }
+
+        return [
+            'id' => $userId,
+            'name' => (string) ($names[$userId] ?? '—'),
+            'total' => (int) $rowsForUser->sum(fn (Activity $row) => $row->getAttribute('total')),
+            'byCategory' => $byCategory,
+            'byStatus' => $byStatus,
+        ];
+    }
+
+    /**
+     * @return array{id: int, deskripsi: string, staff: string, progress_percent: int|null, target_selesai: string|null, status: string}
+     */
+    private function buildProjectRow(Activity $activity): array
+    {
+        return [
+            'id' => $activity->id,
+            'deskripsi' => $activity->deskripsi,
+            'staff' => $activity->user->name,
+            'progress_percent' => $activity->progress_percent === null ? null : (int) $activity->progress_percent,
+            'target_selesai' => $activity->target_selesai === null ? null : $activity->target_selesai->toDateString(),
+            'status' => $activity->status->value,
+        ];
     }
 
     /**

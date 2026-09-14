@@ -19,8 +19,9 @@ class WeeklyReportMail extends Mailable
      */
     public function __construct(
         private readonly string $periodLabel,
-        private readonly string $excelContents,
+        private readonly string $fileContents,
         private readonly string $filename,
+        private readonly string $mimeType,
         private readonly string $gmName,
         private readonly ?string $spvName,
         private readonly string $senderName,
@@ -61,8 +62,8 @@ class WeeklyReportMail extends Mailable
     public function attachments(): array
     {
         return [
-            Attachment::fromData(fn () => $this->excelContents, $this->filename)
-                ->withMime('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'),
+            Attachment::fromData(fn () => $this->fileContents, $this->filename)
+                ->withMime($this->mimeType),
         ];
     }
 }

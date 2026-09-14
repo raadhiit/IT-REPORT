@@ -68,7 +68,8 @@ class MonitoringController extends Controller
                     'status_label' => $log->status->label(),
                     'recipient_email' => $log->recipient_email,
                     'error_message' => $log->error_message,
-                    'has_excel' => $log->excel_path !== null,
+                    'has_file' => $log->excel_path !== null,
+                    'file_extension' => $log->excel_path ? strtoupper(pathinfo($log->excel_path, PATHINFO_EXTENSION)) : null,
                     'sent_at' => $log->created_at->format('Y-m-d H:i'),
                 ]),
         ]);
@@ -116,7 +117,8 @@ class MonitoringController extends Controller
     }
 
     /**
-     * Download the Excel file archived for a weekly report send attempt.
+     * Download the report file (Excel or PDF, per the staff member's format preference) archived
+     * for a weekly report send attempt.
      */
     public function downloadExcel(WeeklyReportLog $weeklyReportLog): StreamedResponse
     {
@@ -124,7 +126,8 @@ class MonitoringController extends Controller
             abort(404);
         }
 
-        $filename = "laporan-mingguan-{$weeklyReportLog->user->name}-{$weeklyReportLog->period_start->toDateString()}.xlsx";
+        $extension = pathinfo($weeklyReportLog->excel_path, PATHINFO_EXTENSION);
+        $filename = "laporan-mingguan-{$weeklyReportLog->user->name}-{$weeklyReportLog->period_start->toDateString()}.{$extension}";
 
         return Storage::disk('local')->download($weeklyReportLog->excel_path, $filename);
     }

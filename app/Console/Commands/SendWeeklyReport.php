@@ -12,7 +12,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('report:send-weekly')]
-#[Description('Email the current week\'s activity report (Excel) to the configured GM/SPV recipients.')]
+#[Description('Email the current week\'s activity report to the configured GM/SPV recipients, in each staff member\'s preferred format (Excel or PDF).')]
 class SendWeeklyReport extends Command
 {
     /**

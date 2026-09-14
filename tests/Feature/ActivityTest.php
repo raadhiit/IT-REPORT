@@ -22,6 +22,7 @@ test('a user can log an activity', function () {
     $response = $this->actingAs($user)->post(route('activities.store'), [
         'tanggal' => '2026-08-11',
         'kategori' => 'support',
+        'status' => 'selesai',
         'deskripsi' => 'Fixed printer on 3rd floor',
     ]);
 
@@ -32,6 +33,41 @@ test('a user can log an activity', function () {
         'kategori' => 'support',
         'deskripsi' => 'Fixed printer on 3rd floor',
     ]);
+});
+
+test('a project activity can log progress and a target date', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('activities.store'), [
+        'tanggal' => '2026-08-11',
+        'kategori' => 'project',
+        'status' => 'on_track',
+        'deskripsi' => 'Migrasi server file ke NAS baru',
+        'progress_percent' => 75,
+        'target_selesai' => '2026-09-20',
+    ]);
+
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('activities', [
+        'user_id' => $user->id,
+        'progress_percent' => 75,
+        'target_selesai' => '2026-09-20',
+    ]);
+});
+
+test('progress percent over 100 is rejected', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->post(route('activities.store'), [
+        'tanggal' => '2026-08-11',
+        'kategori' => 'project',
+        'status' => 'on_track',
+        'deskripsi' => 'Migrasi server file ke NAS baru',
+        'progress_percent' => 150,
+    ]);
+
+    $response->assertSessionHasErrors('progress_percent');
 });
 
 test('activity requires a valid category', function () {
@@ -53,6 +89,7 @@ test('a user can upload an attachment with an activity', function () {
     $response = $this->actingAs($user)->post(route('activities.store'), [
         'tanggal' => '2026-08-11',
         'kategori' => 'maintenance',
+        'status' => 'selesai',
         'deskripsi' => 'Server maintenance',
         'attachments' => [UploadedFile::fake()->create('report.pdf', 500, 'application/pdf')],
     ]);
@@ -157,6 +194,57 @@ test('the activity list can be filtered by a custom date range', function () {
         ->has('activities', 1)
         ->where('activities.0.deskripsi', 'July')
     );
+});
+
+test('a user can edit their own activity', function () {
+    $user = User::factory()->create();
+    $activity = Activity::factory()->for($user)->create(['deskripsi' => 'Old description']);
+
+    $response = $this->actingAs($user)->put(route('activities.update', $activity), [
+        'tanggal' => '2026-08-12',
+        'kategori' => 'project',
+        'status' => 'on_track',
+        'deskripsi' => 'Updated description',
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect(route('activities.index'));
+
+    $this->assertDatabaseHas('activities', [
+        'id' => $activity->id,
+        'kategori' => 'project',
+        'deskripsi' => 'Updated description',
+    ]);
+});
+
+test('a user cannot edit another users activity', function () {
+    $owner = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $activity = Activity::factory()->for($owner)->create();
+
+    $response = $this->actingAs($otherUser)->put(route('activities.update', $activity), [
+        'tanggal' => '2026-08-12',
+        'kategori' => 'project',
+        'deskripsi' => 'Hijacked',
+    ]);
+
+    $response->assertForbidden();
+});
+
+test('an admin can edit any users activity', function () {
+    $admin = User::factory()->admin()->create();
+    $owner = User::factory()->create();
+    $activity = Activity::factory()->for($owner)->create();
+
+    $response = $this->actingAs($admin)->put(route('activities.update', $activity), [
+        'tanggal' => '2026-08-12',
+        'kategori' => 'support',
+        'status' => 'selesai',
+        'deskripsi' => 'Fixed by admin',
+    ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect(route('activities.index'));
+
+    $this->assertDatabaseHas('activities', ['id' => $activity->id, 'deskripsi' => 'Fixed by admin']);
 });
 
 test('an invalid date range falls back to the current week instead of erroring', function () {
