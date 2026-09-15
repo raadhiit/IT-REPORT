@@ -119,6 +119,49 @@ test('guests cannot download the weekly report excel', function () {
     $response->assertRedirect(route('login'));
 });
 
+test('a user can request a backdated range via from/to query params', function () {
+    $staff = User::factory()->create();
+
+    Activity::factory()->for($staff)->create(['tanggal' => '2026-07-20']); // 3 weeks back
+    Activity::factory()->for($staff)->create(['tanggal' => '2026-08-10']); // current week, excluded from this query
+
+    $response = $this->actingAs($staff)->get(route('reports.weekly', ['from' => '2026-07-13', 'to' => '2026-07-26']));
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('reports/Weekly')
+        ->where('start', '2026-07-13')
+        ->where('end', '2026-07-26')
+        ->where('total', 1),
+    );
+});
+
+test('backdated range also applies to pdf and excel downloads', function () {
+    $user = User::factory()->create();
+    Activity::factory()->for($user)->create(['tanggal' => '2026-07-20']);
+
+    $pdfResponse = $this->actingAs($user)->get(route('reports.weekly.pdf', ['from' => '2026-07-13', 'to' => '2026-07-26']));
+    $pdfResponse->assertOk();
+    $pdfResponse->assertHeader('content-type', 'application/pdf');
+
+    $excelResponse = $this->actingAs($user)->get(route('reports.weekly.excel', ['from' => '2026-07-13', 'to' => '2026-07-26']));
+    $excelResponse->assertOk();
+    $excelResponse->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+});
+
+test('an invalid or reversed range falls back safely', function () {
+    $staff = User::factory()->create();
+    Activity::factory()->for($staff)->create(['tanggal' => '2026-08-10']); // inside current week
+
+    // "from" and "to" swapped — the controller should still produce a valid ordered range.
+    $response = $this->actingAs($staff)->get(route('reports.weekly', ['from' => '2026-08-16', 'to' => '2026-08-10']));
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->where('start', '2026-08-10')
+        ->where('end', '2026-08-16')
+        ->where('total', 1),
+    );
+});
+
 test('activities outside the current week are excluded', function () {
     $staff = User::factory()->create();
 

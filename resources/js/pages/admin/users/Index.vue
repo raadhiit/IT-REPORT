@@ -77,7 +77,13 @@ const { getInitials } = useInitials();
                                 <Badge variant="outline" class="capitalize">{{ user.role }}</Badge>
                             </td>
                             <td class="px-4 py-3">
-                                <Badge :variant="user.is_active ? 'default' : 'secondary'">
+                                <Badge
+                                    :class="
+                                        user.is_active
+                                            ? 'border-transparent bg-emerald-600 text-white dark:bg-emerald-500'
+                                            : 'border-transparent bg-muted text-muted-foreground'
+                                    "
+                                >
                                     {{ user.is_active ? 'Active' : 'Inactive' }}
                                 </Badge>
                             </td>

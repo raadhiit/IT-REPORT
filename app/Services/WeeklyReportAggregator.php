@@ -26,6 +26,22 @@ class WeeklyReportAggregator
     }
 
     /**
+     * Parse a query-string date, returning null on missing/invalid input so callers can fall back.
+     */
+    public static function parseDate(?string $value): ?CarbonImmutable
+    {
+        if (! $value) {
+            return null;
+        }
+
+        try {
+            return CarbonImmutable::parse($value);
+        } catch (\Exception) {
+            return null;
+        }
+    }
+
+    /**
      * Build the aggregated weekly report data for the given user.
      *
      * Admins get every staff member's activity for the period; staff only get their own.

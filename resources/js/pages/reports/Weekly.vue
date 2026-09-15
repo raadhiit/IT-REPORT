@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, router } from '@inertiajs/vue3';
 import { FileDown } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import CategoryBreakdownBars from '@/components/CategoryBreakdownBars.vue';
 import Heading from '@/components/Heading.vue';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useInitials } from '@/composables/useInitials';
 import { weekly } from '@/routes/reports';
 import { excel, pdf } from '@/routes/reports/weekly';
@@ -29,6 +31,19 @@ defineOptions({
 });
 
 const { getInitials } = useInitials();
+
+const filterFrom = ref(props.start);
+const filterTo = ref(props.end);
+
+function applyFilter(): void {
+    router.get(
+        weekly().url,
+        { from: filterFrom.value, to: filterTo.value },
+        { preserveState: true, preserveScroll: true, only: ['start', 'end', 'total', 'byCategory', 'byStaff', 'detailsByCategory'] },
+    );
+}
+
+const downloadQuery = computed(() => ({ query: { from: props.start, to: props.end } }));
 
 const categoryColors: Record<ActivityCategoryValue, string> = {
     maintenance: 'bg-amber-600',
@@ -87,19 +102,29 @@ function categorySpanClass(index: number): string {
                     </div>
                 </div>
             </CardContent>
-            <div class="flex gap-2 border-t bg-muted/30 px-6 py-3">
-                <Button as-child variant="outline" size="sm">
-                    <a :href="pdf().url">
-                        <FileDown />
-                        Download PDF
-                    </a>
-                </Button>
-                <Button as-child variant="outline" size="sm">
-                    <a :href="excel().url">
-                        <FileDown />
-                        Download Excel
-                    </a>
-                </Button>
+            <div class="flex flex-wrap items-end gap-4 border-t bg-muted/30 px-6 py-3">
+                <div class="grid gap-1.5">
+                    <Label for="filter_from" class="text-xs text-muted-foreground">Dari tanggal</Label>
+                    <Input id="filter_from" v-model="filterFrom" type="date" class="h-8 w-40" @change="applyFilter" />
+                </div>
+                <div class="grid gap-1.5">
+                    <Label for="filter_to" class="text-xs text-muted-foreground">Sampai tanggal</Label>
+                    <Input id="filter_to" v-model="filterTo" type="date" class="h-8 w-40" @change="applyFilter" />
+                </div>
+                <div class="ml-auto flex gap-2">
+                    <Button as-child variant="outline" size="sm">
+                        <a :href="pdf(downloadQuery).url">
+                            <FileDown />
+                            Download PDF
+                        </a>
+                    </Button>
+                    <Button as-child variant="outline" size="sm">
+                        <a :href="excel(downloadQuery).url">
+                            <FileDown />
+                            Download Excel
+                        </a>
+                    </Button>
+                </div>
             </div>
         </Card>
 

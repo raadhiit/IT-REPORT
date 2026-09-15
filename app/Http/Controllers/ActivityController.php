@@ -8,7 +8,6 @@ use App\Http\Requests\StoreActivityRequest;
 use App\Http\Requests\UpdateActivityRequest;
 use App\Models\Activity;
 use App\Services\WeeklyReportAggregator;
-use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -25,8 +24,8 @@ class ActivityController extends Controller
         $user = $request->user();
         [$defaultFrom, $defaultTo] = WeeklyReportAggregator::currentWeek();
 
-        $from = $this->parseDate($request->query('from')) ?? $defaultFrom;
-        $to = $this->parseDate($request->query('to')) ?? $defaultTo;
+        $from = WeeklyReportAggregator::parseDate($request->query('from')) ?? $defaultFrom;
+        $to = WeeklyReportAggregator::parseDate($request->query('to')) ?? $defaultTo;
 
         return Inertia::render('activities/Index', [
             'activities' => $user->activities()
@@ -44,22 +43,6 @@ class ActivityController extends Controller
             'from' => $from->toDateString(),
             'to' => $to->toDateString(),
         ]);
-    }
-
-    /**
-     * Parse a query-string date, returning null on missing/invalid input so callers can fall back.
-     */
-    private function parseDate(?string $value): ?CarbonImmutable
-    {
-        if (! $value) {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($value);
-        } catch (\Exception) {
-            return null;
-        }
     }
 
     /**

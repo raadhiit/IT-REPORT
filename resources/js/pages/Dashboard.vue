@@ -60,10 +60,10 @@ function fullDayLabel(date: string): string {
         </div>
 
         <div class="grid gap-4 sm:grid-cols-4">
-            <Card class="border-l-4 border-l-foreground">
+            <Card class="border-l-4 border-l-primary bg-primary/5 dark:bg-primary/10">
                 <CardContent>
-                    <p class="text-2xl font-semibold tabular-nums">{{ total }}</p>
-                    <p class="text-xs text-muted-foreground uppercase">Total Aktivitas</p>
+                    <p class="text-3xl font-bold tabular-nums">{{ total }}</p>
+                    <p class="text-xs font-medium text-muted-foreground uppercase">Total Aktivitas</p>
                     <p
                         class="mt-1 flex items-center gap-1 text-xs"
                         :class="delta > 0 ? 'text-emerald-600 dark:text-emerald-500' : delta < 0 ? 'text-amber-600 dark:text-amber-500' : 'text-muted-foreground'"
@@ -75,22 +75,22 @@ function fullDayLabel(date: string): string {
                     </p>
                 </CardContent>
             </Card>
-            <Card class="border-l-4 border-l-emerald-600">
+            <Card class="border-l-4 border-l-emerald-600 bg-emerald-50 dark:bg-emerald-500/10">
                 <CardContent>
-                    <p class="text-2xl font-semibold tabular-nums">{{ statusCount('selesai') }}</p>
-                    <p class="text-xs text-muted-foreground uppercase">Selesai</p>
+                    <p class="text-3xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">{{ statusCount('selesai') }}</p>
+                    <p class="text-xs font-medium text-muted-foreground uppercase">Selesai</p>
                 </CardContent>
             </Card>
-            <Card class="border-l-4 border-l-amber-600">
+            <Card class="border-l-4 border-l-amber-600 bg-amber-50 dark:bg-amber-500/10">
                 <CardContent>
-                    <p class="text-2xl font-semibold tabular-nums">{{ statusCount('on_track') }}</p>
-                    <p class="text-xs text-muted-foreground uppercase">On Track</p>
+                    <p class="text-3xl font-bold tabular-nums text-amber-700 dark:text-amber-400">{{ statusCount('on_track') }}</p>
+                    <p class="text-xs font-medium text-muted-foreground uppercase">On Track</p>
                 </CardContent>
             </Card>
-            <Card class="border-l-4 border-l-rose-600">
+            <Card class="border-l-4 border-l-rose-600 bg-rose-50 dark:bg-rose-500/10">
                 <CardContent>
-                    <p class="text-2xl font-semibold tabular-nums">{{ statusCount('pending') }}</p>
-                    <p class="text-xs text-muted-foreground uppercase">Pending</p>
+                    <p class="text-3xl font-bold tabular-nums text-rose-700 dark:text-rose-400">{{ statusCount('pending') }}</p>
+                    <p class="text-xs font-medium text-muted-foreground uppercase">Pending</p>
                 </CardContent>
             </Card>
         </div>

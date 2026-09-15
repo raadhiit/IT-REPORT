@@ -52,8 +52,18 @@ function formatDate(date: string): string {
                         <tr v-for="person in staff" :key="person.id" class="border-b last:border-0">
                             <td class="px-4 py-3 font-medium">{{ person.name }}</td>
                             <td v-for="date in dates" :key="date" class="px-4 py-3 text-center">
-                                <Check v-if="person.filled[date]" class="mx-auto size-4 text-emerald-600" />
-                                <X v-else class="mx-auto size-4 text-destructive" />
+                                <span
+                                    v-if="person.filled[date]"
+                                    class="inline-flex size-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
+                                >
+                                    <Check class="size-3.5" />
+                                </span>
+                                <span
+                                    v-else
+                                    class="inline-flex size-6 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
+                                >
+                                    <X class="size-3.5" />
+                                </span>
                             </td>
                         </tr>
                     </tbody>
