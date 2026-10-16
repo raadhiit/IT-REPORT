@@ -26,7 +26,7 @@ const props = defineProps<{
         staff: string;
         period_start: string;
         period_end: string;
-        status: 'sent' | 'failed';
+        status: 'sent' | 'failed' | 'skipped';
         status_label: string;
         recipient_email: string;
         error_message: string | null;
@@ -138,10 +138,12 @@ defineOptions({
                             <td class="px-4 py-3 whitespace-nowrap">{{ formatDate(log.period_start) }} – {{ formatDate(log.period_end) }}</td>
                             <td class="px-4 py-3 font-medium">{{ log.staff }}</td>
                             <td class="px-4 py-3">
-                                <Badge :variant="log.status === 'sent' ? 'default' : 'destructive'">{{ log.status_label }}</Badge>
+                                <Badge :variant="log.status === 'sent' ? 'default' : log.status === 'failed' ? 'destructive' : 'secondary'">
+                                    {{ log.status_label }}
+                                </Badge>
                             </td>
                             <td class="px-4 py-3 text-xs text-muted-foreground">
-                                {{ log.status === 'failed' ? log.error_message : `ke ${log.recipient_email}` }}
+                                {{ log.status === 'sent' ? `ke ${log.recipient_email}` : log.error_message }}
                             </td>
                             <td class="px-4 py-3">
                                 <a

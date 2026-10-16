@@ -2,6 +2,7 @@
 
 use App\Enums\WeeklyReportLogStatus;
 use App\Mail\WeeklyReportMail;
+use App\Models\Activity;
 use App\Models\ReportSetting;
 use App\Models\User;
 use App\Models\WeeklyReportLog;
@@ -125,6 +126,8 @@ test('admin can manually trigger the weekly report send for all eligible staff',
     ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
     $radhit = monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
     $budi = monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+    Activity::factory()->for($radhit)->create(['tanggal' => '2026-08-25']);
+    Activity::factory()->for($budi)->create(['tanggal' => '2026-08-25']);
 
     $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
         'from' => '2026-08-24',
@@ -141,8 +144,10 @@ test('an explicit empty user_ids array (the "all staff" default sent by the UI) 
     Mail::fake();
     $admin = User::factory()->admin()->create();
     ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
-    monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
-    monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+    $radhit = monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
+    $budi = monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+    Activity::factory()->for($radhit)->create(['tanggal' => '2026-08-25']);
+    Activity::factory()->for($budi)->create(['tanggal' => '2026-08-25']);
 
     $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
         'user_ids' => [],
@@ -160,6 +165,7 @@ test('admin can manually trigger the weekly report send for a single staff membe
     ReportSetting::current()->update(['gm_name' => 'Rendra', 'gm_email' => 'gm@example.com']);
     $radhit = monitoringStaffWithOfficeMailbox(['name' => 'Radhit']);
     monitoringStaffWithOfficeMailbox(['name' => 'Budi']);
+    Activity::factory()->for($radhit)->create(['tanggal' => '2026-08-25']);
 
     $response = $this->actingAs($admin)->post(route('admin.monitoring.send-manual'), [
         'user_ids' => [$radhit->id],

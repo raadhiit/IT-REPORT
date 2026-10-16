@@ -46,11 +46,11 @@ class SendWeeklyReport extends Command
         foreach ($staff as $member) {
             $log = $sender->send($member, $setting, $start, $end);
 
-            if ($log->status === WeeklyReportLogStatus::Sent) {
-                $this->info("Weekly report sent to {$setting->gm_email} from {$member->office_email}.");
-            } else {
-                $this->error("Failed to send weekly report for {$member->name}: {$log->error_message}");
-            }
+            match ($log->status) {
+                WeeklyReportLogStatus::Sent => $this->info("Weekly report sent to {$setting->gm_email} from {$member->office_email}."),
+                WeeklyReportLogStatus::Skipped => $this->warn("Skipped {$member->name}: {$log->error_message}"),
+                WeeklyReportLogStatus::Failed => $this->error("Failed to send weekly report for {$member->name}: {$log->error_message}"),
+            };
         }
 
         return self::SUCCESS;

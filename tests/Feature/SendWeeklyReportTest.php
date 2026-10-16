@@ -38,8 +38,8 @@ test('it sends one email per staff with an office mailbox configured, from that 
 
     $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
     $budi = staffWithOfficeMailbox(['name' => 'Budi', 'office_mail_host' => 'mail.other.com']);
-    Activity::factory()->for($radhit)->create();
-    Activity::factory()->for($budi)->create();
+    Activity::factory()->for($radhit)->create(['tanggal' => now()->toDateString()]);
+    Activity::factory()->for($budi)->create(['tanggal' => now()->toDateString()]);
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -58,7 +58,7 @@ test('a staff member set to pdf format receives a pdf attachment, not excel', fu
 
     configureGmSettings();
     $radhit = staffWithOfficeMailbox(['name' => 'Radhit', 'report_format' => 'pdf']);
-    Activity::factory()->for($radhit)->create();
+    Activity::factory()->for($radhit)->create(['tanggal' => now()->toDateString()]);
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -73,7 +73,8 @@ test('it sends without cc when no spv email is configured', function () {
     Mail::fake();
 
     configureGmSettings();
-    staffWithOfficeMailbox();
+    $staff = staffWithOfficeMailbox();
+    Activity::factory()->for($staff)->create(['tanggal' => now()->toDateString()]);
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -99,7 +100,8 @@ test('a skipped run (missing gm email) does not mark the day as sent, so it can 
 
     // Fix the config and retry the same day — it should now actually send.
     configureGmSettings();
-    staffWithOfficeMailbox();
+    $staff = staffWithOfficeMailbox();
+    Activity::factory()->for($staff)->create(['tanggal' => now()->toDateString()]);
     $this->artisan('report:send-weekly')->assertSuccessful();
 
     Mail::assertSentCount(1);
@@ -115,6 +117,41 @@ test('it skips sending when gm email is set but gm name is missing', function ()
     $this->artisan('report:send-weekly')->assertSuccessful();
 
     Mail::assertNothingSent();
+});
+
+test('a staff member with no activity logged this period is skipped, not emailed', function () {
+    Mail::fake();
+
+    configureGmSettings();
+    $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
+    // No Activity created for Radhit — nothing logged this period.
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    Mail::assertNothingSent();
+
+    $log = WeeklyReportLog::first();
+    expect($log->user_id)->toBe($radhit->id);
+    expect($log->status)->toBe(WeeklyReportLogStatus::Skipped);
+    expect($log->excel_path)->toBeNull();
+});
+
+test('only staff with logged activity are emailed, the rest are skipped', function () {
+    Mail::fake();
+
+    configureGmSettings();
+    $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
+    $budi = staffWithOfficeMailbox(['name' => 'Budi', 'office_mail_host' => 'mail.other.com']);
+    Activity::factory()->for($radhit)->create(['tanggal' => now()->toDateString()]);
+    // Budi has no activity this period.
+
+    $this->artisan('report:send-weekly')->assertSuccessful();
+
+    Mail::assertSentCount(1);
+    Mail::assertSent(WeeklyReportMail::class, fn (WeeklyReportMail $mail) => $mail->hasFrom($radhit->office_email));
+
+    expect(WeeklyReportLog::where('user_id', $radhit->id)->first()->status)->toBe(WeeklyReportLogStatus::Sent);
+    expect(WeeklyReportLog::where('user_id', $budi->id)->first()->status)->toBe(WeeklyReportLogStatus::Skipped);
 });
 
 test('it skips gracefully when no active staff has an office mailbox configured', function () {
@@ -156,7 +193,7 @@ test('a successful send is logged with the excel file archived', function () {
     configureGmSettings();
 
     $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
-    Activity::factory()->for($radhit)->create();
+    Activity::factory()->for($radhit)->create(['tanggal' => now()->toDateString()]);
 
     $this->artisan('report:send-weekly')->assertSuccessful();
 
@@ -175,6 +212,8 @@ test('it isolates failures per staff, so one failing send does not block the oth
 
     $radhit = staffWithOfficeMailbox(['name' => 'Radhit']);
     $budi = staffWithOfficeMailbox(['name' => 'Budi']);
+    Activity::factory()->for($radhit)->create(['tanggal' => now()->toDateString()]);
+    Activity::factory()->for($budi)->create(['tanggal' => now()->toDateString()]);
 
     $this->mock(WeeklyReportExcelExporter::class, function ($mock) use ($budi) {
         $mock->shouldReceive('build')->andReturnUsing(function ($report, $start, $end, $name) use ($budi) {

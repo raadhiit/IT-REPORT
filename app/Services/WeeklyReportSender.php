@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\WeeklyReportLog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -26,11 +27,28 @@ class WeeklyReportSender
      * Build and email the given staff member's report for the period, from their own office
      * mailbox to the configured GM/SPV recipients, logging the outcome either way. Sent as
      * Excel or PDF depending on the staff member's own report_format preference.
+     *
+     * Staff with zero logged activity in the period are skipped (logged, not emailed) — an empty
+     * report tells the GM nothing useful, and sending it every time a staff member has nothing to
+     * report would just be noise.
      */
     public function send(User $member, ReportSetting $setting, CarbonImmutable $start, CarbonImmutable $end): WeeklyReportLog
     {
         try {
-            $file = $this->buildFile($member, $start, $end);
+            $report = $this->aggregator->build($member, $start, $end);
+
+            if ($report['total'] === 0) {
+                return WeeklyReportLog::create([
+                    'user_id' => $member->id,
+                    'period_start' => $start->toDateString(),
+                    'period_end' => $end->toDateString(),
+                    'status' => WeeklyReportLogStatus::Skipped,
+                    'recipient_email' => $setting->gm_email,
+                    'error_message' => 'Tidak ada aktivitas tercatat pada periode ini.',
+                ]);
+            }
+
+            $file = $this->buildFile($member, $report, $start, $end);
 
             $mailerName = "office-smtp-{$member->id}";
             config(["mail.mailers.{$mailerName}" => [
@@ -89,14 +107,20 @@ class WeeklyReportSender
     }
 
     /**
-     * Render the member's report in their preferred format.
+     * Render the member's already-built report in their preferred format.
      *
+     * @param  array{
+     *     total: int,
+     *     byCategory: Collection<int, array{value: string, label: string, count: int}>,
+     *     byStatus: Collection<int, array{value: string, label: string, count: int}>,
+     *     byStaff: Collection<int, array{id: int, name: string, total: int, byCategory: Collection<int, array{value: string, count: int}>, byStatus: array<string, int>}>,
+     *     detailsByCategory: Collection<int, array{value: string, label: string, activities: Collection<int, array{id: int, tanggal: string, deskripsi: string, staff: string, status: string}>}>,
+     *     projects: array<int, array{id: int, deskripsi: string, staff: string, progress_percent: int|null, target_selesai: string|null, status: string}>,
+     * }  $report
      * @return array{contents: string, extension: string, mime: string}
      */
-    private function buildFile(User $member, CarbonImmutable $start, CarbonImmutable $end): array
+    private function buildFile(User $member, array $report, CarbonImmutable $start, CarbonImmutable $end): array
     {
-        $report = $this->aggregator->build($member, $start, $end);
-
         if ($member->report_format === ReportFormat::Pdf) {
             $pdf = Pdf::loadView('reports.weekly-pdf', [
                 'start' => $start->toFormattedDateString(),
